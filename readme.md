@@ -1,4 +1,3 @@
-### Readme
 This directory is part of a larger set of work for my Warwick Third Year Project (Dissertation). Here I model, create data and simulate Ad-Hoc networks. 
 
 ### Dataset 
