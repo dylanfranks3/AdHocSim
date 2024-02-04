@@ -1,13 +1,12 @@
 import os, shutil
+import pandas as pd
 
-path = "/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/outdoor-run-20031017-arpl/Trace"
+path = "/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData"
 directory = os.fsencode(path)
     
 for file in os.listdir(directory):
     filename = os.fsdecode(file)
-    if filename.isnumeric():
-        #os.mkdir(f'/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData/{filename}')
-        newPath = path +f'/{filename}/APRL/10.0.0.{filename}.APRL.data.parsed'
-        shutil.copy(newPath,f'/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData/{filename}')
-        shutil.copy(path +f'/{filename}/gps_tcpdump/full/position.log.parsed',f'/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData/{filename}')
-    
+    if filename == '1':
+        packets = path +f'/{filename}/10.0.0.{filename}.APRL.data.parsed.csv'
+        data = pd.read_csv(packets, delimiter=",",header=None,usecols=[0,2,3])
+        data.to_csv(packets,header=False,index=False)
