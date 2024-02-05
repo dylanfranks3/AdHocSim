@@ -6,7 +6,5 @@ directory = os.fsencode(path)
     
 for file in os.listdir(directory):
     filename = os.fsdecode(file)
-    if filename!='1':
-        packets = path +f'/{filename}/position.log.parsed.csv'
-        data = pd.read_csv(packets, delimiter="\s+\s+",header=None)
-        data.to_csv(packets,header=False,index=False)
+    if filename.isnumeric():
+        shutil.move(f'/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData/{filename}/position.log.parsed.csv',f'/Users/dylan/Code/thirdYearProject/NANSimulation/dataset/dartmouthCleanedSimData/{filename}/{filename}.position.csv')
