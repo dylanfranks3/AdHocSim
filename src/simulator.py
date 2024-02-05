@@ -1,4 +1,3 @@
-import itertools
 class Simulator:
     def __init__(self,network, length, time, output, interval):
         self.network = network # network class
