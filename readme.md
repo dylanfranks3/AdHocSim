@@ -68,3 +68,12 @@ TODO
         - static: distane(pos1,pos2)
 
 
+
+### What i want the 'direct' program to do:
+1. Create nodes
+2. create network
+3. create sim
+4. add location movements of nodes to requests
+5. add packets at time 0 to source of nodes
+6. add requests of packet sending 
+
