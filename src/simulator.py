@@ -1,9 +1,11 @@
 import argparse,time
+from manim import *
 class Simulator:
-    def __init__(self,network, length, time, output, interval):
+    def __init__(self,network, length, time, output, display, interval):
         self.network = network
         self.length = length # length of sim
         self.output = output # verbose output TODO
+        self.display = display
         self.interval = interval # how large the increment is in the simulation
         self.requests = [] # calls an instance of this class has to make, i.e. add a packet to a node
         self.time = time # typically start at 0
@@ -17,7 +19,7 @@ class Simulator:
         self.requests.append([self.time+delay,command,*awgs])
 
     def manageRequests(self):
-        while (float(self.time) in [float(i[0]) for i in self.requests]):
+        while (float(self.time) in [float(i[0]) for i in self.requests]): # to make sure all current requests get processed
             for index,request in enumerate(self.requests):
                 if float(request[0]) == float(self.time): # if the current time is equal to the request start time
                     request[1](*request[2:])
@@ -38,6 +40,9 @@ class Simulator:
         while self.time <= self.length:
             self.manageRequests()
             self.incrementTime()
+        if self.visualise:
+            ...
+            
         
         
     def findNode(self,guid): # find a node given a uid
@@ -46,8 +51,11 @@ class Simulator:
         return False
 
 
-    def showState(self):
 
+
+
+
+    def showState(self):
         print( 
 f"""HIGH-LEVEL NETWORK:
 No. of nodes: {len(self.network.nodeContainer)}

@@ -9,21 +9,24 @@ import argparse, os
 def parser():
     parser = argparse.ArgumentParser(description='SIMULATOR CLI TOOL')
     parser.add_argument('-d', '--directory', help='<Required> arg to pass the directory, see readme', required=True)
-    parser.add_argument('-m','--model',help='<Required> arg that decides the model, pass: normal, NAN',required=True)
-    parser.add_argument('-v','--visualise',help='<Required> arg whether to create a visualising .mp3 in exec path',type=bool,required=True)
+    parser.add_argument('-m','--model',help='arg that decides the model, pass: normal, NAN',required=False,default='direct')
+    parser.add_argument('-v','--visualise',help='arg whether to create a visualising .mp3 in exec path',type=bool,required=False,default=False)
+    parser.add_argument('-l','--logging',help='arg whether to show state of network post execution in stdout',type=bool,required=False,default=False)
+    
     args = vars(parser.parse_args())
     
     dataDirectory = args['directory']
     model = args['model']
     visualise = args['visualise']
+    logging = args['logging']
 
-    buildSim(dataDirectory,model,visualise)
+    buildSim(dataDirectory,model,visualise,logging)
 
 
-def buildSim(dataDirectory,model,visualise):
+def buildSim(dataDirectory,model,visualise,logging):
     if model == 'direct':
         n = network.Network()
-        s = simulator.Simulator(network=n,length=773,time=0.0,output=True,interval=0.25) # for the dartmouth dataset
+        s = simulator.Simulator(network=n,length=773,time=0.0,output=True,interval=0.25,visualise=visualise) # for the dartmouth dataset
 
     else:  
         ### TODO when not direct model
@@ -32,12 +35,11 @@ def buildSim(dataDirectory,model,visualise):
    
     
     s.run()
+    if logging == True:
+        print (s.showState())
 
-    #for i in  (s.requests):
-   #     print (i)
-    print (len(s.requests))
-    print (s.showState())
-    #print ("Unexecuted requests: " + str(len(s.requests)))
+        
+    print ("Unexecuted requests: " + str(len(s.requests)))
     
     
     
