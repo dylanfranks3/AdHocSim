@@ -33,8 +33,8 @@ def buildSim(dataDirectory,model,visualise):
     
     s.run()
 
-    for i in  (s.requests):
-        print (i)
+    #for i in  (s.requests):
+   #     print (i)
     print (len(s.requests))
     print (s.showState())
     #print ("Unexecuted requests: " + str(len(s.requests)))

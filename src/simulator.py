@@ -17,11 +17,11 @@ class Simulator:
         self.requests.append([self.time+delay,command,*awgs])
 
     def manageRequests(self):
-        for index,request in enumerate(self.requests):
-            if float(request[0]) == float(self.time): # if the current time is equal to the request start time
-                
-                request[1](*request[2:])
-                self.requests.pop(index)
+        while (float(self.time) in [float(i[0]) for i in self.requests]):
+            for index,request in enumerate(self.requests):
+                if float(request[0]) == float(self.time): # if the current time is equal to the request start time
+                    request[1](*request[2:])
+                    self.requests.pop(index)
 
         
        
@@ -37,15 +37,6 @@ class Simulator:
     def run(self): # call this to run the sim
         while self.time <= self.length:
             self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-            self.manageRequests()
-
             self.incrementTime()
         
         
