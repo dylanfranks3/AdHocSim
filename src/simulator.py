@@ -8,7 +8,6 @@ class Simulator:
         self.requests = [] # calls an instance of this class has to make, i.e. add a packet to a node
         self.time = time # typically start at 0
         self.setup()
-        self.late = 0
 
 
     def setup(self): # passing the sim to the net so that it can add requests
@@ -19,11 +18,14 @@ class Simulator:
 
     def manageRequests(self):
         for index,request in enumerate(self.requests):
-            if request[0] == self.time: # if the current time is equal to the request start time
+            if float(request[0]) == float(self.time): # if the current time is equal to the request start time
+                
                 request[1](*request[2:])
                 self.requests.pop(index)
-            elif request[0] >= self.time:
-                self.late+=1
+
+        
+       
+    
                 
             
     def incrementTime(self):
@@ -35,12 +37,17 @@ class Simulator:
     def run(self): # call this to run the sim
         while self.time <= self.length:
             self.manageRequests()
-            self.incrementTime()
-            #if self.time == 57:
-                #print (self.requests)
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
+            self.manageRequests()
 
-            #self.showState()
-            #time.sleep(0.02)
+            self.incrementTime()
+        
         
     def findNode(self,guid): # find a node given a uid
         for gNode in self.network.nodeContainer:
@@ -63,7 +70,10 @@ Requests in simulation: {len(self.requests)}
 NODES:""")
     
         for index,node in enumerate(self.network.nodeContainer):
-            print (f'NODE{node.uid}:')
+            print (f'NODE {node.uid}:')
+            for k,v in node.data.items():
+                print (f'{k}: {len(v)}')
+            print("")
             print ("SRC   | DEST  | SIZE")
             for packet in node.socketWaiting:                
                 print (f'NODE{packet.src.uid} | NODE{packet.dest.uid} | {packet.size}')

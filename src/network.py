@@ -7,7 +7,7 @@ class Network():
 
     def calculateLatency(self,node1=None,node2=None):
         #TODO
-        return 4
+        return 0
         return random.choice([i/4 for i in range(0,17)])
     
 

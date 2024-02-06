@@ -2,6 +2,7 @@
 from src import *
 import argparse, os
 
+
 #global s
 #global n
 # cli interface
@@ -22,19 +23,21 @@ def parser():
 def buildSim(dataDirectory,model,visualise):
     if model == 'direct':
         n = network.Network()
-        s = simulator.Simulator(network=n,length=771,time=0,output=True,interval=0.25) # for the dartmouth dataset
+        s = simulator.Simulator(network=n,length=773,time=0.0,output=True,interval=0.25) # for the dartmouth dataset
 
     else:  
         ### TODO when not direct model
         pass
     getNodes(s,n,dataDirectory)
-    print (len(s.requests))
-
+   
+    
     s.run()
-    #for i in  (s.requests):
-        #print (i)
-    #print (s.showState())
-    print ("Unexecuted requests: " + str(len(s.requests)))
+
+    for i in  (s.requests):
+        print (i)
+    print (len(s.requests))
+    print (s.showState())
+    #print ("Unexecuted requests: " + str(len(s.requests)))
     
     
     
@@ -74,8 +77,15 @@ def getNodes(sim,net,directory):
                     line = line.split(',')
                     sim.request(int(float(line[0])),newNode.updateLocation,location.Location([float(line[1]),float(line[2]),float(line[3])]))
 
+
+    #print (len(sim.requests))
+    # taking existing nodes and adding packets and location movement
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)
+        if filename.isnumeric(): # removing chance for DS_store etc      
             # packets
             # open node packet data
+            newNode = sim.findNode(int(filename))
             dataFilePath = f'{ptDirectory}/{filename}/{filename}.data.csv'            
             with open(dataFilePath,'r') as f:
                 lines = f.read().splitlines()
@@ -90,7 +100,6 @@ def getNodes(sim,net,directory):
                         p = packet.Packet(int(float(line[0])),newNode,destNode)
                         sim.request(0,newNode.addPacket,p)
                         sim.request(int(float(line[1])),net.sendPacketDirect,newNode,destNode,p)
-
 
 parser()
 
