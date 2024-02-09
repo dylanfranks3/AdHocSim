@@ -1,4 +1,3 @@
-# important functions: MinimumBoundingBox
 from scipy.spatial import ConvexHull
 from math import sqrt
 import numpy as np

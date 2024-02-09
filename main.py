@@ -3,7 +3,7 @@ from src import *
 import argparse, os, math
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
-
+from minimumBoundingBox import MinimumBoundingBox, rotate_points
 
 class networkVisualiser(Scene):
     def __init__(self, simulation, **kwargs):
@@ -13,7 +13,6 @@ class networkVisualiser(Scene):
         self.nodes = self.simulation.network.nodeContainer
         self.timeScale = 30 # n times faster than the real sim
         super().__init__(**kwargs)
-        print (self.requests[-1])
         
 
     
@@ -53,15 +52,28 @@ class networkVisualiser(Scene):
         self.play(animation,run_time = 2.5)
         self.wait(2)
 
+    def fixCoords(self):
+        dots = []
+        boundingBox = MinimumBoundingBox([(i.location.location.location[0],i.location.location.location[1]) for i in self.nodes])
+        tl,tr,br,bl = (i for i in boundingBox.corner_points) # getting the smallest box around all these points
+        
+        xDist = tr[0] - tl[0]
+        yDist = tr[1] - tl[1]
+        angle = -math.atan(yDist/xDist) #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
+        
+        newPointsRotated = rotate_points(tl,angle,[(i.location.location.location[0],i.location.location.location[1]) for i in self.nodes])
+        tl,tr,br,bl = rotate_points(tl,angle,(tl,tr,br,bl))
+
+        newXDist = 
+        
+
     def makeSimulation(self):
         # lets define how big the space is 6x6 realistacally for simplicity
-       
+        self.fixCoords()
 
-        print (self.requests[:10:])
-        dots = []
-        for n in self.nodes:
-            dLoc = n.location.location
+        
 
+        quit()
 
         finishedTime = self.requests[-1][0]
         # iterate through each interval of the sim
