@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from src import *
-import argparse, os, math
+import argparse, os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
 from minimumBoundingBox import MinimumBoundingBox, rotate_points
@@ -52,19 +52,35 @@ class networkVisualiser(Scene):
         self.play(animation,run_time = 2.5)
         self.wait(2)
 
+    def fixNodeCoord(self,gNode):
+        pass
     def fixCoords(self):
-        dots = []
-        boundingBox = MinimumBoundingBox([(i.location.location.location[0],i.location.location.location[1]) for i in self.nodes])
+        allHistory = []
+        for i in self.nodes:
+            for i in i.historicLocation:
+                if i != None:
+                  allHistory.append((i.location.location[0],i.location.location[1]))
+
+        coords = allHistory
+        boundingBox = MinimumBoundingBox(coords)
         tl,tr,br,bl = (i for i in boundingBox.corner_points) # getting the smallest box around all these points
-        
+       
         xDist = tr[0] - tl[0]
         yDist = tr[1] - tl[1]
-        angle = -math.atan(yDist/xDist) #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
+        angle = -math.atan(yDist/xDist)  #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
         
-        newPointsRotated = rotate_points(tl,angle,[(i.location.location.location[0],i.location.location.location[1]) for i in self.nodes])
+        newPointsRotated = rotate_points(tl,angle,coords)
         tl,tr,br,bl = rotate_points(tl,angle,(tl,tr,br,bl))
 
-        newXDist = 
+        newXDist = tr[0]-tl[0]
+        newYDist = tr[1]-br[1]
+        centreOfRect = ((tl[0] + tr[0])/2,(tl[1] + br[1])/2)
+        newPointsMoved = [(i[0]-centreOfRect[0],i[1]-centreOfRect[1]) for i in newPointsRotated]
+        scalex = 6/newXDist
+        scaley = 6/newYDist
+        newPointsEnglarged = [(i[0]*scalex*0.8,i[1]*scaley*0.8) for i in newPointsMoved] #0.8 because what is the min bounding 
+        print (random.sample(newPointsEnglarged,100))
+        
         
 
     def makeSimulation(self):
@@ -213,7 +229,7 @@ def buildSim(dataDirectory,model,visualise,logging):
         print (s.showState())
 
         
-    print ("Unexecuted requests: " + str(len(s.requests)))
+    #print ("Unexecuted requests: " + str(len(s.requests)))
 
     scene = networkVisualiser(s)
     scene.render()
