@@ -1,5 +1,8 @@
 import argparse,time
 from manim import *
+from manim.utils.file_ops import open_file as open_media_file 
+
+
 class Simulator:
     def __init__(self,network, length, time, output, display, interval):
         self.network = network
@@ -10,6 +13,7 @@ class Simulator:
         self.requests = [] # calls an instance of this class has to make, i.e. add a packet to a node
         self.time = time # typically start at 0
         self.setup()
+        self.historicRequests = []
 
 
     def setup(self): # passing the sim to the net so that it can add requests
@@ -24,12 +28,8 @@ class Simulator:
                 if float(request[0]) == float(self.time): # if the current time is equal to the request start time
                     request[1](*request[2:])
                     self.requests.pop(index)
+                    self.historicRequests.append(request)
 
-        
-       
-    
-                
-            
     def incrementTime(self):
         self.time += self.interval
 
@@ -38,13 +38,13 @@ class Simulator:
 
     def run(self): # call this to run the sim
         while self.time <= self.length:
-            self.manageRequests()
-            self.incrementTime()
-        if self.visualise:
-            ...
-            
-        
-        
+            self.manageRequests() # process requests that are currently scheduled
+            self.incrementTime() # increase the time by self.interval
+        # if the user passed in true for the visualiser option
+        if self.display: 
+            self.createVisual()
+
+
     def findNode(self,guid): # find a node given a uid
         for gNode in self.network.nodeContainer:
             if gNode.uid == guid: return gNode 
@@ -52,9 +52,14 @@ class Simulator:
 
 
 
+    def createVisual(self):
+        # 1. make an instance of the visualiser
+        # 2. render it
+        # 3. open the file that was made
+        ...
+        
 
-
-
+    # TODO maybe overload the print function
     def showState(self):
         print( 
 f"""HIGH-LEVEL NETWORK:
@@ -83,5 +88,8 @@ NODES:""")
             #    print (f'{k} : {" ".join([" "self.readablePacket(i) for i in v])}')
             
 
-    print ("---------------------------------------")
+        print ("---------------------------------------")
+
+
+
 

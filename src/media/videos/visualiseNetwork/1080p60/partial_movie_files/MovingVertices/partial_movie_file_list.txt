@@ -1,5 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/src/media/videos/visualiseNetwork/1080p60/partial_movie_files/MovingVertices/3529212410_2654463046_223132457.mp4'
-file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/src/media/videos/visualiseNetwork/1080p60/partial_movie_files/MovingVertices/3040924799_1704852926_2229930643.mp4'
-file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/src/media/videos/visualiseNetwork/1080p60/partial_movie_files/MovingVertices/3040924799_334425431_1734051955.mp4'
-file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/src/media/videos/visualiseNetwork/1080p60/partial_movie_files/MovingVertices/3040924799_1704852926_2258270776.mp4'

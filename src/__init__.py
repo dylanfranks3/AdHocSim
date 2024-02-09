@@ -1,2 +1,2 @@
-__all__ = ["location","nanNetwork","nanNode","network","node","packet","simulator"]
+__all__ = ["location","nanNetwork","nanNode","network","node","packet","simulator","visualiseNetwork"]
 
