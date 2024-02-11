@@ -5,23 +5,36 @@ from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
 from minimumBoundingBox import MinimumBoundingBox, rotate_points
 
+SCALE = 0.98
 class networkVisualiser(Scene):
     def __init__(self, simulation, **kwargs):
+        super().__init__(**kwargs)
+
         self.simulation = simulation
+
         self.requests = self.simulation.historicRequests
         self.requests.sort(key=lambda x: x[0])
+
         self.nodes = self.simulation.network.nodeContainer
-        self.timeScale = 30 # n times faster than the real sim
-        super().__init__(**kwargs)
+        self.timeScale = 20 # n times faster than the real sim
+
+        # scale the nodes in x and y direction
+        self.scaleNodesX = None
+        self.scaleNodesY = None 
+        self.angleRotate = None # this is the angle to rotate all the coords by
+        self.centreOfRotation = None
+        self.translate = None
+        self.fixCoords() # find the bounding box etc.. append to attributes        
+        
         
 
     
     def construct(self):
-        self.makeSimulation()
-        quit()
+        
         self.plane()
         self.counter()
         self.wait(1)
+        self.makeSimulation()
 
     
     def plane(self):
@@ -52,8 +65,30 @@ class networkVisualiser(Scene):
         self.play(animation,run_time = 2.5)
         self.wait(2)
 
-    def fixNodeCoord(self,gNode):
-        pass
+    def fixNodeCoord(self, coord):
+
+        coord = rotate_points(self.centreOfRotation,self.angleRotate,[coord])[0]
+        coord = (coord[0]-self.translate[0],coord[1]-self.translate[1])
+        coord =  (coord[0]*self.scaleNodesX,coord[1]*self.scaleNodesY)
+        coord = np.array([coord[0],coord[1],0])
+        return coord + 3*LEFT # move to where the plane is 
+        
+    
+    def findCorners(self,points): # given the vertices of a rectangle label them tr,tl,br,bl
+        tl = points[0]
+        oCorners = points[1:]
+        def distance(num):
+            x1,y1 = tl
+            x2,y2 = num
+            return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        
+        oCorners = sorted(oCorners, key=distance)
+        tr,br,bl = oCorners[1],oCorners[2],oCorners[0]
+        return (tl,tr,br,bl)
+
+
+        
+
     def fixCoords(self):
         allHistory = []
         for i in self.nodes:
@@ -63,47 +98,98 @@ class networkVisualiser(Scene):
 
         coords = allHistory
         boundingBox = MinimumBoundingBox(coords)
-        tl,tr,br,bl = (i for i in boundingBox.corner_points) # getting the smallest box around all these points
-       
+        corners = [i for i in boundingBox.corner_points] # getting the smallest box around all these points
+        corners = self.findCorners(corners)
+        tr,tl,bl,br = corners
+        self.centreOfRotation = ((tl[0] + tr[0])/2,(tl[1] + br[1])/2)
         xDist = tr[0] - tl[0]
         yDist = tr[1] - tl[1]
-        angle = -math.atan(yDist/xDist)  #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
+        angle = math.atan(xDist/yDist) + 0.5*math.pi #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
+        self.angleRotate = angle 
         
-        newPointsRotated = rotate_points(tl,angle,coords)
-        tl,tr,br,bl = rotate_points(tl,angle,(tl,tr,br,bl))
+        cornersOld = (tl,tr,br,bl)
+        corners = rotate_points(self.centreOfRotation,self.angleRotate,cornersOld)
+        corners = self.findCorners(corners)
+        tl,tr,br,bl = corners
 
         newXDist = tr[0]-tl[0]
         newYDist = tr[1]-br[1]
         centreOfRect = ((tl[0] + tr[0])/2,(tl[1] + br[1])/2)
-        newPointsMoved = [(i[0]-centreOfRect[0],i[1]-centreOfRect[1]) for i in newPointsRotated]
+        #newPointsMoved = [(i[0]-centreOfRect[0],i[1]-centreOfRect[1]) for i in newPointsRotated]
+        self.translate = centreOfRect 
+
         scalex = 6/newXDist
-        scaley = 6/newYDist
-        newPointsEnglarged = [(i[0]*scalex*0.8,i[1]*scaley*0.8) for i in newPointsMoved] #0.8 because what is the min bounding 
-        print (random.sample(newPointsEnglarged,100))
+        scaley = 6/newXDist
+        self.scaleNodesX = scalex * SCALE
+        self.scaleNodesY = scaley * SCALE
+
+        #newPointsEnglarged = [(i[0]*scalex,i[1]*scaley) for i in newPointsMoved] #0.8 because what is the min bounding 
+
+        #print (random.sample(newPointsEnglarged,100))
         
-        
+
+    def getDot(self,arr,gUid): # from an array of Dots, find the Dot with given loc
+        for i in arr:
+            if i.uid == gUid:
+                return i
 
     def makeSimulation(self):
-        # lets define how big the space is 6x6 realistacally for simplicity
-        self.fixCoords()
 
-        
+        dots = []
+        for index,eachNode in enumerate(self.nodes):
+            loc = eachNode.location.location.location
+            loc = self.fixNodeCoord(loc)
+            virtualNode = node.Node(eachNode.uid)
+            virtualNode.updateLocation(loc)
+            virtualNode.visualDot = Dot(virtualNode.location)
+            dots.append(virtualNode)
 
-        quit()
+        xCoords = []
+        for i in dots:
+            self.add(i.visualDot)
+            xCoords.append([i.location[0],i.uid])
+        self.wait(2)
 
         finishedTime = self.requests[-1][0]
         # iterate through each interval of the sim
-        intervalInVisualisation = self.timeScale*self.simulation.interval/finishedTime # how long each interval is in the visualisation
+        intervalInVisualisation = (self.timeScale/finishedTime)*self.simulation.interval # how long each interval is in the visualisation
+        print (intervalInVisualisation)
         for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
-            while self.requests[0][0] <= i:
+            intervalAnims = []
+            while float(self.requests[0][0]) <= float(i):
                 cRequest = self.requests[0]
-                #if cRequest[1].__func__ == node.Node.
+                
+                if cRequest[1].__func__ == node.Node.updateLocation:
+                    movedNode = cRequest[1].__self__
+                    originalLoc = self.fixNodeCoord(cRequest[1].__self__.location.location.location)
+                    try:
+                        newLoc = self.fixNodeCoord(cRequest[2].location.location) # TODO work out why this is a thing
+                    except:
+                        newLoc = self.fixNodeCoord(cRequest[2].location)
+                    
+                    originalDot = self.getDot(dots,movedNode.uid)
+                    
+                    newDot = Dot(newLoc)
+                    animation = ReplacementTransform(originalDot.visualDot,newDot)
+                    originalDot.visualDot = newDot
+                    intervalAnims.append(animation)
+                    AnimationGroup
+            
+                self.requests.pop(0)
 
 
-            self.wait(intervalInVisualisation)
-
+            anim_group = AnimationGroup(*intervalAnims,run_time=intervalInVisualisation)
+            print (len(intervalAnims), i)
+            self.play(anim_group)
+            
+            
+            
+            if i == 250:
+                return
 
             
+
+
 
 
     def counter(self):

@@ -15,6 +15,7 @@ class Node:
 
         self.socketWaiting = [] # a list of Packets waiting to be sent assume priority of order (first)
         self.historicLocation = [self.location] # historic store of data
+        self.visualDot = None
 
 
     def updateLocation(self,newLocation):
