@@ -5,7 +5,7 @@ from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
 from minimumBoundingBox import MinimumBoundingBox, rotate_points
 
-SCALE = 0.98
+SCALE = 0.95
 class networkVisualiser(Scene):
     def __init__(self, simulation, **kwargs):
         super().__init__(**kwargs)
@@ -63,10 +63,8 @@ class networkVisualiser(Scene):
         plane = Group(rect2,y_arrow,x_arrow,yText,xText,number_plane)
         animation = plane.animate.shift(LEFT * 3)
         self.play(animation,run_time = 2.5)
-        self.wait(2)
 
     def fixNodeCoord(self, coord):
-
         coord = rotate_points(self.centreOfRotation,self.angleRotate,[coord])[0]
         coord = (coord[0]-self.translate[0],coord[1]-self.translate[1])
         coord =  (coord[0]*self.scaleNodesX,coord[1]*self.scaleNodesY)
@@ -110,7 +108,12 @@ class networkVisualiser(Scene):
         cornersOld = (tl,tr,br,bl)
         corners = rotate_points(self.centreOfRotation,self.angleRotate,cornersOld)
         corners = self.findCorners(corners)
-        tl,tr,br,bl = corners
+        
+        br,tr,tl,bl = corners
+        tl,tr,br,bl = br,tr,tl,bl
+
+
+        
 
         newXDist = tr[0]-tl[0]
         newYDist = tr[1]-br[1]
@@ -123,6 +126,11 @@ class networkVisualiser(Scene):
         self.scaleNodesX = scalex * SCALE
         self.scaleNodesY = scaley * SCALE
 
+        #print ([tl,tr,br,bl])
+        #print (centreOfRect)
+
+        
+
         #newPointsEnglarged = [(i[0]*scalex,i[1]*scaley) for i in newPointsMoved] #0.8 because what is the min bounding 
 
         #print (random.sample(newPointsEnglarged,100))
@@ -134,21 +142,30 @@ class networkVisualiser(Scene):
                 return i
 
     def makeSimulation(self):
-
+        # making the dots representing the nodes, TODO, colour code master, etc
         dots = []
-        for index,eachNode in enumerate(self.nodes):
-            loc = eachNode.location.location.location
-            loc = self.fixNodeCoord(loc)
-            virtualNode = node.Node(eachNode.uid)
-            virtualNode.updateLocation(loc)
-            virtualNode.visualDot = Dot(virtualNode.location)
-            dots.append(virtualNode)
+        self.requests = sorted(self.requests,key=lambda x: x[0])
+        for request in self.requests:
+            if request[1].__func__ == node.Node.updateLocation:
+                    movedNode = request[1].__self__
+                    if movedNode.uid not in [i.uid for i in dots]:
+                        print (request[1].__self__)
+                        try:
+                            loc = self.fixNodeCoord(request[1].__self__.location.location.location) # TODO work out why this is a thing
+                        except:
+                            loc = self.fixNodeCoord(request[1].__self__.location.location)
 
-        xCoords = []
-        for i in dots:
-            self.add(i.visualDot)
-            xCoords.append([i.location[0],i.uid])
-        self.wait(2)
+                        virtualNode = node.Node(movedNode.uid)
+                        virtualNode.updateLocation(loc)
+                        virtualNode.visualDot = Dot(virtualNode.location)
+                        dots.append(virtualNode)
+
+
+        
+
+
+
+
 
         finishedTime = self.requests[-1][0]
         # iterate through each interval of the sim
@@ -156,7 +173,8 @@ class networkVisualiser(Scene):
         print (intervalInVisualisation)
         for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
             intervalAnims = []
-            while float(self.requests[0][0]) <= float(i):
+            dotsAnims = []
+            while len(self.requests) > 0 and float(self.requests[0][0]) <= float(i):
                 cRequest = self.requests[0]
                 
                 if cRequest[1].__func__ == node.Node.updateLocation:
@@ -167,25 +185,25 @@ class networkVisualiser(Scene):
                     except:
                         newLoc = self.fixNodeCoord(cRequest[2].location)
                     
-                    originalDot = self.getDot(dots,movedNode.uid)
+                    originalDot = self.getDot(dots,movedNode.uid)                  
                     
                     newDot = Dot(newLoc)
                     animation = ReplacementTransform(originalDot.visualDot,newDot)
                     originalDot.visualDot = newDot
-                    intervalAnims.append(animation)
-                    AnimationGroup
+                    dotsAnims.append(animation)
             
                 self.requests.pop(0)
 
+            if len(dotsAnims) > 0:
+                anim_group = AnimationGroup(*dotsAnims,run_time=intervalInVisualisation)
+                self.play(anim_group)
+                print (len(intervalAnims), i)
 
-            anim_group = AnimationGroup(*intervalAnims,run_time=intervalInVisualisation)
-            print (len(intervalAnims), i)
-            self.play(anim_group)
-            
-            
-            
-            if i == 250:
+            if i == 300:
                 return
+            
+            
+            
 
             
 
