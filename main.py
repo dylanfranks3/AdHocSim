@@ -157,7 +157,16 @@ class networkVisualiser(Scene):
 
                         virtualNode = node.Node(movedNode.uid)
                         virtualNode.updateLocation(loc)
-                        virtualNode.visualDot = Dot(virtualNode.location)
+                        if movedNode.uid in [39,41,45,47]:
+                            c = BLUE_A
+                        elif movedNode.uid in [38,36,35,34]:
+                            c = RED
+                        elif movedNode.uid in [33,32,31,30]:
+                            c = GREEN
+                        else:
+                            c = ORANGE
+                        
+                        virtualNode.visualDot = Dot(virtualNode.location,color=c).scale(1.5)
                         dots.append(virtualNode)
 
 
@@ -174,6 +183,7 @@ class networkVisualiser(Scene):
         for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
             intervalAnims = []
             dotsAnims = []
+            packetsAnims = []
             while len(self.requests) > 0 and float(self.requests[0][0]) <= float(i):
                 cRequest = self.requests[0]
                 
@@ -187,19 +197,41 @@ class networkVisualiser(Scene):
                     
                     originalDot = self.getDot(dots,movedNode.uid)                  
                     
-                    newDot = Dot(newLoc)
+                    newDot = Dot(newLoc,color=originalDot.visualDot.color).scale(1.5) # keep the color
                     animation = ReplacementTransform(originalDot.visualDot,newDot)
                     originalDot.visualDot = newDot
                     dotsAnims.append(animation)
+
+
+                # packets moving
+                if cRequest[1].__func__ == network.Network.sendPacketDirect:
+                    fromNode = cRequest[2]
+                    toNode = cRequest[3]
+                    try:
+                        fromNodeLocation = self.fixNodeCoord(fromNode.location.location.location)
+                    except:
+                        fromNodeLocation = self.fixNodeCoord(fromNode.location.location)
+                    try:
+                        toNodeLocation = self.fixNodeCoord(toNode.location.location.location)
+                    except:
+                        toNodeLocation = self.fixNodeCoord(toNode.location.location)
+
+
+                    packetVis = Dot(fromNodeLocation).scale(0.5)
+                    #dotsAnims.append(FadeIn(packetVis))
+                    packetsAnims.append(packetVis.animate.move_to(toNodeLocation))
+                    packetsAnims.append(Wait(intervalInVisualisation))
+                    #packetsAnims.append(FadeOut(packetVis))
             
                 self.requests.pop(0)
 
             if len(dotsAnims) > 0:
                 anim_group = AnimationGroup(*dotsAnims,run_time=intervalInVisualisation)
-                self.play(anim_group)
+                packetsAnimGroup  = AnimationGroup(*packetsAnims,run_time=intervalInVisualisation*20)
+                self.play(anim_group,packetsAnimGroup)
                 print (len(intervalAnims), i)
 
-            if i == 300:
+            if i == 100:
                 return
             
             
