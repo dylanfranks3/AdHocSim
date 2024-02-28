@@ -8,7 +8,7 @@ class Location:
         self.location = location
 
     def updateLocation(self, newLocation):
-        self.location = newLocation
+        self.location = newLocation.location
 
     @staticmethod
     def distance(pos1,pos2):

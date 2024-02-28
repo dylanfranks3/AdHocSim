@@ -19,7 +19,16 @@ class Network():
     def sendPacketDirect(self,src,dest,packet):
         src.removePacket(packet)
         latency = self.calculateLatency() 
-        self.simulator.request(latency,dest.addPacket,packet)
+        self.simulator.request(latency,dest.addPacket,packet) # add the packet to the recipetent
+        self.simulator.request(latency,self.sendPacketDirectCall,src,dest) # tell the sim, here is the nodes and use this to build vis
+
+
+    def sendPacketDirectCall(self,src,dest):
+        pass
+
+
+
+    
 
 
     def addNode(self,node,uid):

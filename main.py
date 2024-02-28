@@ -13,7 +13,7 @@ class networkVisualiser(Scene):
         self.simulation = simulation
 
         self.requests = self.simulation.historicRequests
-        self.requests.sort(key=lambda x: x[0])
+        self.requests = sorted(self.requests.copy(),key=lambda x: x[0])
 
         self.nodes = self.simulation.network.nodeContainer
         self.timeScale = 20 # n times faster than the real sim
@@ -73,15 +73,23 @@ class networkVisualiser(Scene):
         
     
     def findCorners(self,points): # given the vertices of a rectangle label them tr,tl,br,bl
-        tl = points[0]
-        oCorners = points[1:]
+        tl = max(sorted(points,key=lambda x: x[0]),key=lambda x: x[1])
+
+        points.remove(tl)
+        oCorners = points
         def distance(num):
             x1,y1 = tl
             x2,y2 = num
             return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         
         oCorners = sorted(oCorners, key=distance)
-        tr,br,bl = oCorners[1],oCorners[2],oCorners[0]
+        if abs(oCorners[0][1] -tl[1]) < abs(oCorners[1][1] - tl[1]):
+            tr,br,bl = oCorners[0],oCorners[2],oCorners[1]
+        
+        else:
+            tr,br,bl = oCorners[1],oCorners[2],oCorners[0]
+       
+       
         return (tl,tr,br,bl)
 
 
@@ -90,27 +98,30 @@ class networkVisualiser(Scene):
     def fixCoords(self):
         allHistory = []
         for i in self.nodes:
-            for i in i.historicLocation:
-                if i != None:
-                  allHistory.append((i.location.location[0],i.location.location[1]))
+            for hL in i.historicLocation:
+                if hL != None:
+                  allHistory.append((hL.location[0],hL.location[1]))
 
         coords = allHistory
         boundingBox = MinimumBoundingBox(coords)
         corners = [i for i in boundingBox.corner_points] # getting the smallest box around all these points
         corners = self.findCorners(corners)
-        tr,tl,bl,br = corners
+        tl,tr,br,bl = corners
         self.centreOfRotation = ((tl[0] + tr[0])/2,(tl[1] + br[1])/2)
         xDist = tr[0] - tl[0]
         yDist = tr[1] - tl[1]
-        angle = math.atan(xDist/yDist) + 0.5*math.pi #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
+        angle = math.atan(yDist/xDist) #+ 0.5*math.pi #find the angle that the top left point of the rectangle has and the top right and rotate all these points accordingly
         self.angleRotate = angle 
         
         cornersOld = (tl,tr,br,bl)
         corners = rotate_points(self.centreOfRotation,self.angleRotate,cornersOld)
         corners = self.findCorners(corners)
         
-        br,tr,tl,bl = corners
-        tl,tr,br,bl = br,tr,tl,bl
+        tl,tr,br,bl = corners
+
+
+
+        
 
 
         
@@ -125,15 +136,6 @@ class networkVisualiser(Scene):
         scaley = 6/newXDist
         self.scaleNodesX = scalex * SCALE
         self.scaleNodesY = scaley * SCALE
-
-        #print ([tl,tr,br,bl])
-        #print (centreOfRect)
-
-        
-
-        #newPointsEnglarged = [(i[0]*scalex,i[1]*scaley) for i in newPointsMoved] #0.8 because what is the min bounding 
-
-        #print (random.sample(newPointsEnglarged,100))
         
 
     def getDot(self,arr,gUid): # from an array of Dots, find the Dot with given loc
@@ -142,32 +144,23 @@ class networkVisualiser(Scene):
                 return i
 
     def makeSimulation(self):
+        print (self.requests[-1])
         # making the dots representing the nodes, TODO, colour code master, etc
-        dots = []
-        self.requests = sorted(self.requests,key=lambda x: x[0])
+        createdDots = []
         for request in self.requests:
             if request[1].__func__ == node.Node.updateLocation:
                     movedNode = request[1].__self__
-                    if movedNode.uid not in [i.uid for i in dots]:
-                        print (request[1].__self__)
-                        try:
-                            loc = self.fixNodeCoord(request[1].__self__.location.location.location) # TODO work out why this is a thing
-                        except:
-                            loc = self.fixNodeCoord(request[1].__self__.location.location)
-
+                    if movedNode.uid not in [i.uid for i in createdDots]:
+                        loc = request[1].__self__.getLocation() 
+                        print (loc)
+                        return
                         virtualNode = node.Node(movedNode.uid)
                         virtualNode.updateLocation(loc)
-                        if movedNode.uid in [39,41,45,47]:
-                            c = BLUE_A
-                        elif movedNode.uid in [38,36,35,34]:
-                            c = RED
-                        elif movedNode.uid in [33,32,31,30]:
-                            c = GREEN
-                        else:
-                            c = ORANGE
                         
-                        virtualNode.visualDot = Dot(virtualNode.location,color=c).scale(1.5)
-                        dots.append(virtualNode)
+                        
+                        virtualNode.visualDot = Dot(self.fixNodeCoord(virtualNode.getLocation())).scale(1.5)
+                        print (virtualNode.getLocation(),virtualNode.uid)
+                        createdDots.append(virtualNode)
 
 
         
@@ -177,9 +170,10 @@ class networkVisualiser(Scene):
 
 
         finishedTime = self.requests[-1][0]
+        #print (finishedTime, 'IS the finish time')
         # iterate through each interval of the sim
         intervalInVisualisation = (self.timeScale/finishedTime)*self.simulation.interval # how long each interval is in the visualisation
-        print (intervalInVisualisation)
+        #print (intervalInVisualisation)
         for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
             intervalAnims = []
             dotsAnims = []
@@ -189,32 +183,20 @@ class networkVisualiser(Scene):
                 
                 if cRequest[1].__func__ == node.Node.updateLocation:
                     movedNode = cRequest[1].__self__
-                    originalLoc = self.fixNodeCoord(cRequest[1].__self__.location.location.location)
-                    try:
-                        newLoc = self.fixNodeCoord(cRequest[2].location.location) # TODO work out why this is a thing
-                    except:
-                        newLoc = self.fixNodeCoord(cRequest[2].location)
+                    newLoc = self.fixNodeCoord(cRequest[2].location) # TODO work out why this is a thing
+                    originalDot = self.getDot(createdDots,movedNode.uid)                  
                     
-                    originalDot = self.getDot(dots,movedNode.uid)                  
-                    
-                    newDot = Dot(newLoc,color=originalDot.visualDot.color).scale(1.5) # keep the color
+                    newDot = Dot(newLoc).scale(1.5) # keep the color
                     animation = ReplacementTransform(originalDot.visualDot,newDot)
                     originalDot.visualDot = newDot
                     dotsAnims.append(animation)
 
 
                 # packets moving
-                if cRequest[1].__func__ == network.Network.sendPacketDirect:
-                    fromNode = cRequest[2]
-                    toNode = cRequest[3]
-                    try:
-                        fromNodeLocation = self.fixNodeCoord(fromNode.location.location.location)
-                    except:
-                        fromNodeLocation = self.fixNodeCoord(fromNode.location.location)
-                    try:
-                        toNodeLocation = self.fixNodeCoord(toNode.location.location.location)
-                    except:
-                        toNodeLocation = self.fixNodeCoord(toNode.location.location)
+                if cRequest[1].__func__ == network.Network.sendPacketDirectCall:
+                    fromNodeLocation = self.fixNodeCoord(cRequest[2].getLocation())
+                    toNodeLocation = self.fixNodeCoord(cRequest[3].getLocation())
+                    
 
 
                     packetVis = Dot(fromNodeLocation).scale(0.5)
@@ -231,7 +213,7 @@ class networkVisualiser(Scene):
                 self.play(anim_group,packetsAnimGroup)
                 print (len(intervalAnims), i)
 
-            if i == 100:
+            if i == 50:
                 return
             
             
@@ -353,7 +335,7 @@ def parser():
 def buildSim(dataDirectory,model,visualise,logging):
     if model == 'direct':
         n = network.Network()
-        s = simulator.Simulator(network=n,length=773,time=0.0,output=True,interval=0.25,display=visualise) # for the dartmouth dataset
+        s = simulator.Simulator(network=n,length=800,time=0.0,output=True,interval=0.25,display=visualise) # for the dartmouth dataset
 
     else:  
         ### TODO when not direct model
@@ -431,7 +413,9 @@ def getNodes(sim,net,directory):
                         p = packet.Packet(int(float(line[0])),newNode,destNode)
                         sim.request(0,newNode.addPacket,p)
                         sim.request(int(float(line[1])),net.sendPacketDirect,newNode,destNode,p)
-
+    
+    
+    
 parser()
 
 

@@ -29,7 +29,7 @@ class Node:
 
     def removePacket(self,packet):
         self.socketWaiting.remove(packet)
-        self.data["SOUT"].append(packet) #say that it's leaving the socket
+        self.data["SOUT"].append(packet) # say that it's leaving the socket
 
 
     def addPacket(self, packet):
@@ -41,6 +41,9 @@ class Node:
             self.data["TIN"].append(packet) # otherwise this packet needs processing
         else:
             self.data["SIN"].append(packet)
+
+    def getLocation(self):
+        return self.location.location
         
 
         
