@@ -132,18 +132,18 @@ def createPacketData(gPath,gTime,gThroughput,gNodeCount,gPacket):
 
 
 # this takes the newly made dataset, goes through each numeric dir (node) and creates a position.csv with time and size and params
-def createLocationData(gPath,gTime,gX,gY,gNodeCount):
+def createLocationData(gPath,gTime,gX,gY,gNodeCount,gInterval):
     for i in range(1,gNodeCount+1):
         newPath = path + f'/{i}/{i}.position.csv'
         with open(newPath, mode='w+', newline='') as file:
             #print (newPath)
             writer = csv.writer(file)
             time = 0.0
-            random_walk = random_walk_2d(gTime, gX, gY)
+            random_walk = random_walk_2d(round(gTime-1/gInterval), gX, gY)
             for position in random_walk:
                 x, y = position
                 writer.writerow([time, x, y, 0]) # no 3D consideration
-                time += 1
+                time += gInterval
         
 
 
@@ -153,6 +153,7 @@ def createLocationData(gPath,gTime,gX,gY,gNodeCount):
 
 parser = argparse.ArgumentParser(description='DATASET CLI TOOL')
 parser.add_argument('-d', '--dir', help='<Required> arg to the path that you\'d like to create the new dataset in, if it is no', required=True, type=str)
+parser.add_argument('-i', '--interval', help='<Required> arg for size of the interval within the sim', required=True, type=float)
 
 parser.add_argument('-nc', '--nodeCount', help='<Required> arg for the number of nodes', required=True, type=int)
 parser.add_argument('-x', '--xSize', help='<Required> arg for the width of the simulation area', required=True, type=int)
@@ -164,6 +165,7 @@ args = vars(parser.parse_args())
 
 path = args['dir']
 nodeCount = args['nodeCount']
+interval = args['interval']
 xSize = args['xSize']
 ySize = args['ySize']
 time = args['time']
@@ -178,7 +180,7 @@ if not os.path.isdir(path): # if the directory the user wants to use doesn't exi
     os.mkdir(path)
 
 createNodeDirectories(path,nodeCount)
-createLocationData(path,time,xSize,ySize,nodeCount)
+createLocationData(path,time,xSize,ySize,nodeCount,interval)
 createPacketData(path,time,throughput,nodeCount,packetSize)
 
 
