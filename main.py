@@ -21,6 +21,43 @@ class MoveAndRemoveAnimation(Animation):
             self.s.remove(self.mobject)  # Use the appropriate method to remove the mobject
 
 
+class TimedAnimationGroup(AnimationGroup):
+    '''
+    Timed animations may be defined by setting 'start_time' and 'end_time' or 'run_time' in CONFIG of an animation.
+    If they are not defined, the Animation behaves like it would in AnimationGroup.
+    However, lag_ratio and start_time combined might cause unexpected behavior.
+    '''
+    def build_animations_with_timings(self):
+        """
+        Creates a list of triplets of the form
+        (anim, start_time, end_time)
+        """
+        '''
+        mostly copied from manimlib.animation.composition (AnimationGroup)
+        '''
+        self.anims_with_timings = []
+        curr_time = 0
+        for anim in self.animations:
+            # check for new parameters start_time and end_time,
+            # fall back to normal behavior if not provided
+            try:
+                start_time = anim.start_time
+            except:
+                start_time = curr_time
+            try:
+                end_time = anim.end_time
+            except:
+                end_time = start_time + anim.get_run_time()
+            self.anims_with_timings.append(
+                (anim, start_time, end_time)
+            )
+            # Start time of next animation is based on
+            # the lag_ratio
+            curr_time = interpolate(
+                start_time, end_time, self.lag_ratio
+            )
+
+
 
 class networkVisualiser(Scene):
     def __init__(self, simulation, **kwargs):
@@ -173,6 +210,8 @@ class networkVisualiser(Scene):
 
     def shift_up(self,mobject,loc):
         return mobject.shift(loc)
+    
+    
 
 
     def makeSimulation(self):
@@ -185,6 +224,7 @@ class networkVisualiser(Scene):
         for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
             dotsAnims = []
             packetAnims = []
+            packetRemove = []
             while len(self.requests) > 0 and float(self.requests[0][0]) <= float(i):
 
                 cRequest = self.requests[0]      
@@ -225,32 +265,59 @@ class networkVisualiser(Scene):
                         nodeDot  = Dot(fixedGLoc).scale(1.5)
                         allNodes.append([gUid,nodeDot])
 
-                    d1 = Dot(LEFT*1000,color=RED).scale(0.5)
-                    self.add(d1)
-                    animation0 = d1.animate(run_time=intervalInVisualisation/100).move_to(fromNodeLocation)
-                    animation1 = d1.animate(run_time=intervalInVisualisation*20).move_to(toNodeLocation)
-                    animation2 = d1.animate(run_time=intervalInVisualisation/100).move_to(LEFT*1000)
-                    packetAnims.append(Succession(animation0,animation1,animation2))
+                    def distFromS(dot,dt):
+                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
+                        #dot.set_opacity(1)
+                        if proportion >= 0.05:
+                            dot.set_opacity(1)
+
+                    def distFromx(dot,dt):
+                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
+                        if proportion <= 0.01:
+                            dot.set_opacity(0)
+                    
+                    def distFromE(dot,dt):
+                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
+                        if proportion >= 0.95:
+                            dot.set_opacity(0)
+
+                    d = Dot(fromNodeLocation,color=RED).scale(0.5)
+                    self.add(d)
+                    d.s = fromNodeLocation
+                    d.e = toNodeLocation
+                    #d.add_updater(distFromS)
+                    #d.add_updater(distFromx)
+                    #d.add_updater(distFromE)
+
+                    animation = d.animate(run_time=intervalInVisualisation*10).move_to(toNodeLocation)
+                    packetAnims.append(animation)
+                    packetRemove.append(d)
+                    
+                    
                     
                     
                     
                 self.requests.pop(0) 
             
-            nodeMovements = AnimationGroup(*dotsAnims)
-            nodeMovements = AnimationGroup(Wait(i*intervalInVisualisation),nodeMovements,lag_ratio=1)
+            d = AnimationGroup(*dotsAnims)
+            p = AnimationGroup(*packetAnims)
 
-            packetMovements = AnimationGroup(*packetAnims)
-            packetMovements = Succession(Wait(i*intervalInVisualisation),packetMovements)
 
-            allAnimations.append(packetMovements)
+            
+            
+            
             
             
             
             print (i)
 
-            if i == 50:
+            if i == 10:
+                #f = AnimationGroup(*allAnimations,lag_ratio=1)
+                #self.play(f)
+                return
                 
-                self.play(*allAnimations)
+                
+
                 return
             
             

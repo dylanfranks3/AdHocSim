@@ -1,0 +1,4 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/media/videos/manimtest/1080p60/partial_movie_files/MovingDotOpacityChange/3529212410_2268332985_2451406477.mp4'
+file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/media/videos/manimtest/1080p60/partial_movie_files/MovingDotOpacityChange/3040924799_4089967466_2959199059.mp4'
+file 'file:/Users/dylan/Code/thirdYearProject/NANSimulation/media/videos/manimtest/1080p60/partial_movie_files/MovingDotOpacityChange/3040924799_1609812626_3662201103.mp4'
