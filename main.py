@@ -4,23 +4,29 @@ import argparse, os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
 from minimumBoundingBox import MinimumBoundingBox, rotate_points
+from collections.abc import Iterable
+
 
 SCALE = 0.95
-class MoveAndRemoveAnimation(Animation):
-    def __init__(self, mobject, target_location, **kwargs):
-        # No need to explicitly handle run_time here; it's passed along via **kwargs to the superclass
-        super().__init__(mobject, **kwargs)
-        self.target_location = target_location
-        self.s = kwargs.get('gS')
+def play_timeline(scene, timeline):
+    previous_t = 0
+    ending_time = 0
+    for t, anims in sorted(timeline.items()):
+        to_wait = t - previous_t
+        if to_wait > 0:
+            scene.wait(to_wait)
+        previous_t = t
+        if not isinstance(anims, Iterable):
+            anims = [anims]
+        for anim in anims:
+            turn_animation_into_updater(anim)
+            scene.add(anim.mobject)
+            ending_time = max(ending_time, t + anim.run_time)
+    if ending_time > t:
+        scene.wait(ending_time-t)
 
-    def interpolate_mobject(self, alpha: float):
-        # Interpolate the movement based on alpha, which is automatically adjusted for the duration (run_time)
-        self.mobject.move_to(self.target_location * alpha + self.starting_mobject.get_center() * (1 - alpha))
+
         
-        if alpha == 1:  # At the end of the animation
-            self.s.remove(self.mobject)  # Use the appropriate method to remove the mobject
-
-
 class TimedAnimationGroup(AnimationGroup):
     '''
     Timed animations may be defined by setting 'start_time' and 'end_time' or 'run_time' in CONFIG of an animation.
@@ -197,9 +203,7 @@ class networkVisualiser(Scene):
                 return i
         return False
     
-    def create_move_and_remove_animation(self, mobject, target_location, **kwargs):
-        # Return the custom animation
-        return MoveAndRemoveAnimation(mobject, target_location, **kwargs)
+
     
     def findByUid(self,arr, gUid):
         for idx,i in enumerate(arr):
@@ -221,7 +225,7 @@ class networkVisualiser(Scene):
 
         # iterate through each interval of the sim
         intervalInVisualisation = (self.simulation.interval/self.timeScale) # how long each interval is in the visualisation
-        for i in range(0,math.ceil(finishedTime/self.simulation.interval) + 1):
+        for idx,i in enumerate(range(0,math.ceil(finishedTime/self.simulation.interval) + 1)):
             dotsAnims = []
             packetAnims = []
             packetRemove = []
@@ -240,7 +244,7 @@ class networkVisualiser(Scene):
                     originalDotIndex = self.findByUid(allNodes,movedNode.uid)
                     originalDot = allNodes[originalDotIndex][1] # the dot element of our found node
                     newLoc = self.fixNodeCoord(gLoc) 
-                    animation = originalDot.animate(run_time=intervalInVisualisation).move_to(newLoc)
+                    animation = prepare_animation(originalDot.animate(run_time=intervalInVisualisation*5).move_to(newLoc))
                     dotsAnims.append(animation)
 
 
@@ -282,16 +286,19 @@ class networkVisualiser(Scene):
                             dot.set_opacity(0)
 
                     d = Dot(fromNodeLocation,color=RED).scale(0.5)
-                    self.add(d)
+                    #self.add(d)
                     d.s = fromNodeLocation
                     d.e = toNodeLocation
                     #d.add_updater(distFromS)
                     #d.add_updater(distFromx)
                     #d.add_updater(distFromE)
 
-                    animation = d.animate(run_time=intervalInVisualisation*10).move_to(toNodeLocation)
+                    animation = prepare_animation(d.animate(run_time=intervalInVisualisation*30).move_to(toNodeLocation))
+                    animation.start_time = intervalInVisualisation*i
+                    animation.end_time = intervalInVisualisation*i + intervalInVisualisation*10
                     packetAnims.append(animation)
-                    packetRemove.append(d)
+                    
+                    packetRemove.append(Animation(d.set_opacity(0),run_time=intervalInVisualisation))
                     
                     
                     
@@ -299,8 +306,11 @@ class networkVisualiser(Scene):
                     
                 self.requests.pop(0) 
             
-            d = AnimationGroup(*dotsAnims)
-            p = AnimationGroup(*packetAnims)
+
+
+            allAnimations.append([dotsAnims,packetAnims,packetRemove])
+
+
 
 
             
@@ -311,10 +321,22 @@ class networkVisualiser(Scene):
             
             print (i)
 
-            if i == 10:
-                #f = AnimationGroup(*allAnimations,lag_ratio=1)
-                #self.play(f)
-                return
+            # here we combine all the animations together and schedule them, check if the time has things scheduled
+            if i == 30:
+                finalAnim = {}
+                for idx,i in enumerate(allAnimations): 
+                    if idx*intervalInVisualisation*5 in finalAnim:
+                        finalAnim[idx*intervalInVisualisation*5] = finalAnim[idx*intervalInVisualisation*5] + [*i[1],*i[0]]
+                    else:
+                        finalAnim[idx*intervalInVisualisation*5] = [*i[0],*i[1]]
+                    if idx*intervalInVisualisation*5+intervalInVisualisation*30 in finalAnim:
+                        finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] = finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] + [*i[2]]
+                    else:
+                        finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] = [*i[2]]
+
+
+                play_timeline(self,finalAnim)
+                self.wait()
                 
                 
 
