@@ -1,4 +1,4 @@
-from . import location
+from .location import Location
 class Node:
     def __init__(self, uid,
                  ) -> None:

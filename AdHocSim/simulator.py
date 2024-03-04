@@ -1,10 +1,11 @@
 import argparse,time
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
-
+from .network import Network
+from .packet import Packet
 
 class Simulator:
-    def __init__(self,network, length, time, output, display, interval):
+    def __init__(self,network: Network, length: float, time: float, output: bool, display: bool, interval: float):
         self.network = network
         self.length = length # length of sim
         self.output = output # verbose output TODO
@@ -19,7 +20,7 @@ class Simulator:
     def setup(self): # passing the sim to the net so that it can add requests
         self.network.simulator = self
 
-    def request(self, delay, command, *awgs):
+    def request(self, delay: float, command, *awgs):
         self.requests.append([self.time+delay,command,*awgs])
 
     def manageRequests(self):
@@ -33,7 +34,7 @@ class Simulator:
     def incrementTime(self):
         self.time += self.interval
 
-    def readablePacket(self,packet): # readable packet in context of the sim
+    def readablePacket(self,packet: Packet): # readable packet in context of the sim
         return [packet.size,packet.src.uid,packet.dest.uid]
 
     def run(self): # call this to run the sim
@@ -45,7 +46,7 @@ class Simulator:
             self.createVisual()
 
 
-    def findNode(self,guid): # find a node given a uid
+    def findNode(self,guid: int): # find a node given a uid
         for gNode in self.network.nodeContainer:
             if gNode.uid == guid: return gNode 
         return False
