@@ -10,10 +10,9 @@
 .tox/
 # packaging
 MANIFEST
-/build/
 /media/
 /dataset/utils/
-/__pycache__/
+/__pycache__
 /.vscode
 /.DS_Store
 /setup.py
