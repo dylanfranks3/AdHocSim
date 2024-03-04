@@ -12,8 +12,8 @@
 MANIFEST
 /media/
 /dataset/utils/
-/__pycache__
-/.vscode
-/.DS_Store
-/setup.py
-/.python-version
+__pycache__
+.vscode
+.DS_Store
+setup.py
+.python-version
