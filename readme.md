@@ -1,7 +1,6 @@
-
 <div align="center">
 <img width="300" src="https://github.com/dylanfranks3/AdHocSimSite/raw/main/assets/LOGO.png"/>
-<p>Looking for a quick usage example? <a href="docs/getting-started.md">Let's get started</a>.</p>
+<p>Want to give it a go? <a href="https://dylanfranks3.github.io/AdHocSimSite/">Let's get started</a>.</p>
 </div>
 
 This directory is part of a larger set of work for my Warwick Third Year Project (Dissertation). Here I model, create data and simulate Ad-Hoc networks. 
