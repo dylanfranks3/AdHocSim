@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 from AdHocSim import *
 import argparse, os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
-from minimumBoundingBox import MinimumBoundingBox, rotate_points
+from utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
 from collections.abc import Iterable
 
 

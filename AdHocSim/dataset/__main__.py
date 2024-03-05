@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse, os
-from dataset import Dataset, setup
+from dataset import setup
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='DATASET CLI TOOL')
