@@ -1,4 +1,10 @@
-<img src='https://github.com/dylanfranks3/AdHocSimSite/raw/main/assets/LOGO.png' width='300' class="center">
+
+<div align="center">
+<h1>AdHocSim</h1>
+<h4>A plain text note-taking assistant</h4>
+<img width="300" src="https://github.com/dylanfranks3/AdHocSimSite/raw/main/assets/LOGO.png"/>
+<p>Looking for a quick usage example? <a href="docs/getting-started.md">Let's get started</a>.</p>
+</div>
 
 This directory is part of a larger set of work for my Warwick Third Year Project (Dissertation). Here I model, create data and simulate Ad-Hoc networks. 
 
