@@ -1,7 +1,5 @@
 
 <div align="center">
-<h1>AdHocSim</h1>
-<h4>A plain text note-taking assistant</h4>
 <img width="300" src="https://github.com/dylanfranks3/AdHocSimSite/raw/main/assets/LOGO.png"/>
 <p>Looking for a quick usage example? <a href="docs/getting-started.md">Let's get started</a>.</p>
 </div>
