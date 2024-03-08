@@ -1,19 +1,91 @@
-#!/usr/bin/env python
 import numpy as np
+import matplotlib.pyplot as plt
 import os, csv,random, math
 
-class Dataset:
-    @staticmethod
-    def createRandomIntegers(size, mean, value_range):
-        """
-        Creates an array of random integers with a specified mean
-        
-        Parameters:
-        - size: the size of the array
-        - mean: the desired mean of the array
-        - value_range: a tuple indicating the range (min, max) of the values
 
-        """
+# Function to check if a point is inside the bounds
+def is_inside_bounds(x, y, xmin, xmax, ymin, ymax):
+    return xmin <= x <= xmax and ymin <= y <= ymax
+
+# Function to pick a new angle, considering the side that was hit
+def pick_new_angle(x, y, xmin, xmax, ymin, ymax):
+    """Pick a new angle randomly between the two furthest corners from the current position."""
+    corners = [(xmin, ymin), (xmin, ymax), (xmax, ymin), (xmax, ymax)]
+    distances = [np.hypot(x - cx, y - cy) for cx, cy in corners]
+    farthest_corners = sorted(range(len(corners)), key=lambda i: -distances[i])[:2]
+
+    # Get angles to the two furthest corners
+    angle1 = np.arctan2(corners[farthest_corners[0]][1] - y, corners[farthest_corners[0]][0] - x)
+    angle2 = np.arctan2(corners[farthest_corners[1]][1] - y, corners[farthest_corners[1]][0] - x)
+
+    # Ensure angle1 is smaller than angle2
+    if angle1 > angle2:
+        angle1, angle2 = angle2, angle1
+
+    # Handle the case when the range crosses the -pi/pi discontinuity
+    if angle2 - angle1 > np.pi:
+        angle1, angle2 = angle2, angle1 + 2 * np.pi
+
+    # Pick a random angle between the two angles
+    new_angle = np.random.uniform(angle1, angle2) % (2 * np.pi)
+    return new_angle
+
+
+def random_walk_2d(gxmin,gxmax,gymin,gymax,gsteps,gInterval):
+    # Rectangle bounds
+    xmin, xmax = gxmin,gxmax
+    ymin, ymax = gymin, gymax
+
+    # Starting point
+    x, y = np.random.uniform(xmin, xmax), np.random.uniform(ymin, ymax)
+
+    # Number of steps
+    n_steps = int(gsteps/gInterval)
+    
+    # Step size and angle initialization
+    angle = np.random.uniform(0, 2*np.pi)
+    step_size = 1*gInterval
+
+    # Lists to store x and y coordinates
+    x_positions = [x]
+    y_positions = [y]
+
+    # Simulate the walk
+    count = 0
+    for _ in range(n_steps-1):
+        
+        # Randomly change the direction and step size slightly for smoothness
+
+        count += step_size
+        if count >= 1:
+            angle += np.random.uniform(-np.pi/13, np.pi/13)
+            count = 0
+        #step_size = np.clip(step_size + np.random.uniform(-0.5, 0.5), 0.5, 2.0)
+        
+        # Calculate new position
+        x_new = x + np.cos(angle) * step_size
+        y_new = y + np.sin(angle) * step_size
+        
+        # Check if the new position is inside bounds, adjust if necessary
+        while not is_inside_bounds(x_new,y_new,xmin,xmax,ymin,ymax):
+            angle = pick_new_angle(x, y, xmin, xmax, ymin, ymax)
+            x_new = x + np.cos(angle) * step_size
+            y_new = y + np.sin(angle) * step_size
+
+        # Update the current position
+        x, y = x_new, y_new
+        x_positions.append(x)
+        y_positions.append(y)
+
+    return list(zip(x_positions,y_positions))
+    
+def createNodeDirectories(gPath,gNodeCount):
+        for i in range(1,gNodeCount+1):
+            os.mkdir(f'{gPath}/{i}/')
+
+
+def createRandomIntegers(size, mean, value_range):
+       
         min_val, max_val = value_range
         random_integers = np.random.randint(min_val, max_val + 1, size=size)
         
@@ -26,67 +98,7 @@ class Dataset:
         
         return random_integers
 
-    
-    # creating a random walk of a node across a 2d plane
-    @staticmethod
-    def random_walk_2d(n, x,y): 
-        # Initialize an array to store the random walk positions
-        current_position = [np.random.randint(x), np.random.randint(y)]
-        allAngles = []
-        k = 4
-        angle = np.random.uniform(0,2*np.pi)
-
-        walk = []
-        change = [False,0]
-
-        for _ in range(n):
-            changeOfAngle = np.random.uniform(-k/10,k/10)
-            angle += changeOfAngle
-
-            
-            if len(allAngles) > 0:
-                angle = (angle + 1.2*(sum(allAngles)/len(allAngles)))/2.1
-            allAngles.append(angle)
-
-            
-            directionV = (np.cos(angle)*0.8,np.sin(angle)*0.8)
-        
-            current_position = (current_position[0] + directionV[0],current_position[1] + directionV[1])
-            current_position = (max(0, min(current_position[0], x-1)),max(0, min(current_position[1], y - 1)))
-
-
-            # how to deal with a node near the perimeter
-
-            if current_position[0] >= x - x/random.randint(50,1000) or current_position[0] <= x/random.randint(50,1000) and change[0] == False:
-                allAngles = [math.pi/random.randint(20,30) + math.pi - i  for  i in allAngles]
-                change[0] = True
-
-            if current_position[1] >= y - y/random.randint(50,1000) or current_position[1] <= y/random.randint(50,1000) and change[0] == False:
-                allAngles = [math.pi/random.randint(20,30) - i  for  i in allAngles]
-                change[0] = True
-
-            if change[0] == True:
-                change[1] += 1
-            if change[0] == True and change[1] > 50:
-                change[0] = False
-                change[1] = 0
-                
-                                
-            walk.append(current_position)
-        
-        return walk
-
-
-
-    # makes dirs for each node
-    @staticmethod
-    def createNodeDirectories(gPath,gNodeCount):
-        for i in range(1,gNodeCount+1):
-            os.mkdir(f'{gPath}/{i}/')
-
-
-    @staticmethod
-    def createPacketData(gPath,gTime,gThroughput,gNodeCount,gPacket):
+def createPacketData(gPath,gTime,gThroughput,gNodeCount,gPacket):
         nodeNos = [i for i in range(1,gNodeCount+1)]
         
         for i in nodeNos:
@@ -106,7 +118,7 @@ class Dataset:
             nodeNosSansCurrent = nodeNos.copy()
             nodeNosSansCurrent.remove(i) # you can't send packets to yourself, duh
             choiceOfNodes = random.sample(nodeNosSansCurrent,k=uniqueComs)
-            amountToChoose = Dataset.createRandomIntegers(gTime+1,uniqueNodesPerSec,(math.floor(0.8*uniqueNodesPerSec),math.ceil(1.2*uniqueNodesPerSec)))
+            amountToChoose = createRandomIntegers(gTime+1,uniqueNodesPerSec,(math.floor(0.8*uniqueNodesPerSec),math.ceil(1.2*uniqueNodesPerSec)))
             with open(f'{gPath}/{i}/{i}.data.csv', mode='w+', newline='') as file:
                 writer = csv.writer(file)
                 for time in range(0,gTime):
@@ -117,13 +129,15 @@ class Dataset:
 
                     for recipitent in thisSecondsRecipetents:
                         # how many packets a given frame will be
-                        match gPacket:
+                        match gThroughput:
                             case 'low':
                                 packetSize = round(random.normalvariate(2.5,1))
                             case 'med':
                                 packetSize = round(random.uniform(3.2,1))
                             case 'high':
                                 packetSize = round(random.uniform(4.3,1.1))
+                        
+
 
                         for _ in range(packetSize):
                             nothing = False
@@ -135,32 +149,36 @@ class Dataset:
                         writer.writerows(messagesToSend)
 
 
-    # this takes the newly made dataset, goes through each numeric dir (node) and creates a position.csv with time and size and params
-    @staticmethod
-    def createLocationData(gPath,gTime,gX,gY,gNodeCount,gInterval):
-        for i in range(1,gNodeCount+1):
-            newPath = gPath + f'/{i}/{i}.position.csv'
-            with open(newPath, mode='w+', newline='') as file:
-                #print (newPath)
-                writer = csv.writer(file)
-                time = 0.0
-                random_walk = Dataset.random_walk_2d(round(gTime-1/gInterval), gX, gY)
-                for position in random_walk:
-                    x, y = position
-                    writer.writerow([time, x, y, 0]) # no 3D consideration
-                    time += gInterval
-            
+          
+          
+
+
+                 
+
+
 
 
 def setup(gPath,gNodeCount,gInterval,gXSize,gYSize,gTime,gPacketSize,gThrougput):
     if not os.path.isdir(gPath): # if the directory the user wants to use doesn't exist, make it
         os.mkdir(gPath)
 
-    Dataset.createNodeDirectories(gPath,gNodeCount)
-    Dataset.createLocationData(gPath,gTime,gXSize,gYSize,gNodeCount,gInterval)
-    Dataset.createPacketData(gPath,gTime,gThrougput,gNodeCount,gPacketSize)
+    createNodeDirectories(gPath,gNodeCount)
+    createLocationData(gPath,gTime,gXSize,gYSize,gNodeCount,gInterval)
+    createPacketData(gPath,gTime,gThrougput,gNodeCount,gPacketSize)
 
 
+def createLocationData(gPath,gTime,gXSize,gYSize,gNodeCount,gInterval):
+    for i in range(1,gNodeCount+1):
+            
 
+            newPath = gPath + f'/{i}/{i}.position.csv'
+            with open(newPath, mode='w+', newline='') as file:
+                writer = csv.writer(file)
+                time = 0.0
+                random_walk = random_walk_2d(0,gXSize,0,gYSize,gTime,gInterval)
+                for position in random_walk:
+                    x, y = position
+                    writer.writerow([time, x, y, 0]) # no 3D consideration
+                    time += gInterval
 
 
