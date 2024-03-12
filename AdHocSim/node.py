@@ -1,4 +1,4 @@
-from .location import Location
+from AdHocSim.location import Location
 
 
 class Node:

@@ -1,4 +1,4 @@
-from .node import Node
+from AdHocSim.node import Node
 
 
 class NANNode(Node):

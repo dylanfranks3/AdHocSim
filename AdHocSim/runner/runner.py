@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-from AdHocSim import *
-import argparse, os, math, random
+from AdHocSim import network, simulator, nanNetwork, location, packet, node
+import os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file
 from utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
@@ -303,29 +302,39 @@ class Count(Animation):
         self.mobject.set_value(value)
 
 
-def buildSim(dataDirectory, model, visualise, logging):
-    if model == "direct":
+def buildSim(dataDirectory, model, visualise, logging, interval, length):
+    length = dataDirectory
+
+    if model == "normal":
         n = network.Network()
         s = simulator.Simulator(
             network=n,
-            length=800,
+            length=length,
             time=0.0,
-            output=True,
-            interval=0.25,
-            display=visualise,
+            output=logging,
+            interval=interval,
         )  # for the dartmouth dataset
 
-    else:
-        ### TODO when not direct model
-        ...
+    elif model == "NAN":
+        n = nanNetwork.NANNetwork()
+        s = simulator.Simulator(
+            network=n,
+            length=length,
+            time=0.0,
+            output=logging,
+            interval=interval,
+        )  # for the dartmouth dataset
 
     getNodes(s, n, dataDirectory)
+
+    return
     s.run()
     if logging == True:
         print(s.showState())
 
-    scene = networkVisualiser(s)
-    scene.render()
+    if visualise:
+        scene = networkVisualiser(s)
+        scene.render()
 
 
 # plaintext directory, gets nodes and packets and adds them to sim/net

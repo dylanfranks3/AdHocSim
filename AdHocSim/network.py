@@ -1,16 +1,13 @@
 import random
-from .packet import Packet
-from .node import Node
-from .location import Location
-from .simulator import Simulator
+from AdHocSim import node, simulator, location, packet
 
 
 class Network:
     def __init__(self):
-        self.nodeContainer: list[Node] = None
-        self.simulator: Simulator = None  # this is set within simulator
+        self.nodeContainer: list[node.Node] = None
+        self.simulator: simulator.Simulator = None  # this is set within simulator
 
-    def calculateLatency(self, node1: Node = None, node2: Node = None):
+    def calculateLatency(self, node1: node.Node = None, node2: node.Node = None):
         # TODO
         return 0
         return random.choice([i / 4 for i in range(0, 17)])
@@ -19,7 +16,7 @@ class Network:
         return max(i.uid for i in self.nodeContainer) + 1
 
     # sending packets directly between nodes
-    def sendPacketDirect(self, src: Node, dest: Node, packet: Packet):
+    def sendPacketDirect(self, src: node.Node, dest: node.Node, packet: packet.Packet):
         src.removePacket(packet)
         latency = self.calculateLatency()
         self.simulator.request(
@@ -35,7 +32,11 @@ class Network:
         )  # tell the sim, here is the nodes and use this to build vis
 
     def sendPacketDirectCall(
-        self, src: Node, dest: Node, srcLoc: Location, destLoc: Location
+        self,
+        src: node.Node,
+        dest: node.Node,
+        srcLoc: location.Location,
+        destLoc: location.Location,
     ):
         pass
 

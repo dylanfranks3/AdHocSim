@@ -1,5 +1,5 @@
+from __future__ import annotations
 import math
-from .location import Location
 
 # class that would contain location info for a particular nodes and some helper
 # and relevant functions about location
