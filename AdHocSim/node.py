@@ -25,7 +25,7 @@ class Node:
         self.historicLocation = [self.location]  # historic store of data
         self.visualDot = None
 
-    def updateLocation(self, newLocation):
+    def updateLocation(self, newLocation: Location):
         # update historic store, and move the node
         if self.location is not None:
             self.location.updateLocation(newLocation)

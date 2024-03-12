@@ -1,4 +1,4 @@
-from AdHocSim import network, simulator, nanNetwork, location, packet, node
+from AdHocSim import network, simulator, nanNetwork, location, packet, node, nanNode
 import os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file
@@ -207,9 +207,7 @@ class networkVisualiser(Scene):
         ]
 
         for idx, request in enumerate(self.requests):
-            if (
-                request[1].__func__ == network.Network.sendPacketDirectCall
-            ):  # and request[2].uid == 1:
+            if request[1].__func__ in [network.Network.sendPacketDirectCall, nanNetwork.Network.sendPacketDirectCall]:  # and request[2].uid == 1:
                 fromNode = request[2]
                 toNode = request[3]
                 fromDot = getNode(fromNode).visualDot
@@ -303,8 +301,7 @@ class Count(Animation):
 
 
 def buildSim(dataDirectory, model, visualise, logging, interval, length):
-    length = dataDirectory
-
+    
     if model == "normal":
         n = network.Network()
         s = simulator.Simulator(
@@ -315,6 +312,8 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
             interval=interval,
         )  # for the dartmouth dataset
 
+
+  
     elif model == "NAN":
         n = nanNetwork.NANNetwork()
         s = simulator.Simulator(
@@ -325,10 +324,16 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
             interval=interval,
         )  # for the dartmouth dataset
 
-    getNodes(s, n, dataDirectory)
+    else:
+        print ("You have to implement a model for that one 🤞")
+        return
 
-    return
+    getNodes(s, n, dataDirectory,model)
+    if model=='NAN':n.setup()
+
+    
     s.run()
+
     if logging == True:
         print(s.showState())
 
@@ -338,7 +343,7 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
 
 
 # plaintext directory, gets nodes and packets and adds them to sim/net
-def getNodes(sim, net, directory):
+def getNodes(sim, net, directory,model):
     # creating nodes and adding to sim/network
     failedAdds = 0  # how many nodes have packets to send to non-existent nodes
     ptDirectory = directory
@@ -352,7 +357,10 @@ def getNodes(sim, net, directory):
             # open position file, add the requests to
             positionFilePath = f"{ptDirectory}/{filename}/{filename}.position.csv"
             nodeUID = int(filename)
-            newNode = node.Node(nodeUID)
+            if model == 'NAN':
+                newNode = nanNode.NANNode(nodeUID)
+            elif model == 'normal':
+                newNode = node.Node(nodeUID)
             nodeArr.append(newNode)
     net.nodeContainer = nodeArr
 
@@ -377,6 +385,9 @@ def getNodes(sim, net, directory):
                         ),
                     )
 
+                firstData = lines[0].split(",")
+                newNode.updateLocation(location.Location([float(firstData[1]), float(firstData[2]), float(firstData[3])]))
+
     # print (len(sim.requests))
     # taking existing nodes and adding packets and location movement
     for file in os.listdir(directory):
@@ -390,7 +401,7 @@ def getNodes(sim, net, directory):
                 lines = f.read().splitlines()
                 for line in lines:
                     line = line.split(",")
-                    dest = int(line[3].split(".")[-1])  # destination node
+                    dest = int(line[3].split(".")[-1])  # destination node uid
                     destNode = sim.findNode(dest)
                     if (
                         destNode == False
@@ -399,11 +410,19 @@ def getNodes(sim, net, directory):
                         failedAdds += 1
                     else:
                         p = packet.Packet(int(float(line[0])), newNode, destNode)
-                        sim.request(0, newNode.addPacket, p)
-                        sim.request(
-                            int(float(line[1])),
-                            net.sendPacketDirect,
-                            newNode,
-                            destNode,
-                            p,
-                        )
+                        if model == 'normal':
+                            sim.request(0, newNode.addPacket, p)
+                            sim.request(
+                                int(float(line[1])),
+                                net.sendPacketDirect,
+                                newNode,
+                                destNode,
+                                p,
+                            )
+                        elif model == 'NAN':
+                            sim.request(int(float(line[1])), newNode.addPacket, p)
+
+
+        
+                        
+                            

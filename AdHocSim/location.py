@@ -14,8 +14,8 @@ class Location:
         self.location = newLocation.location
 
     @staticmethod
-    def distance(pos1: list[float], pos2: list[float]):
-        return math.dist(pos1, pos2)
+    def distance(pos1: Location, pos2: Location):
+        return math.dist(pos1.location[:2], pos2.location[:2])
 
     def getLocation(self):
         return self.location

@@ -42,3 +42,6 @@ class Network:
 
     def addNode(self, node, uid):
         self.nodeContainer.append(node)
+
+    def updater(self):
+        pass

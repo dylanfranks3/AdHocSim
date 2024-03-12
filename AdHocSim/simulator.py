@@ -59,8 +59,9 @@ class Simulator:
         while self.time <= self.length:
             self.manageRequests()  # process requests that are currently scheduled
             self.incrementTime()  # increase the time by self.interval
+            self.network.updater()
         if self.output:
-            self.showState
+            self.showState()
 
     def findNode(self, guid: int):  # find a node given a uid
         for gNode in self.network.nodeContainer:
@@ -68,6 +69,7 @@ class Simulator:
                 return gNode
         return False
 
+    
     # TODO maybe overload the print function
     def showState(self):
         print(

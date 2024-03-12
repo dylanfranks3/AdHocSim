@@ -16,12 +16,14 @@ if __name__ == "__main__":
         "--interval",
         help="<Required> arg for the interval in the simulation, to capture all data ensure databaseInterval%%--interval==0",
         required=True,
+        type = float
     )
     parser.add_argument(
         "-len",
         "--length",
         help="<Required> arg for the length of the simulation, to capture all the data, ensure databaselength<=--length",
         required=True,
+        type=float
     )
     parser.add_argument(
         "-m",
