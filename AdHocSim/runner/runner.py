@@ -7,11 +7,7 @@ from collections.abc import Iterable
 from scipy.interpolate import splprep, splev, interp1d
 import matplotlib.pyplot as plt
 
-config.disable_caching = True
-import sys
-import threading
-#sys.setrecursionlimit(1000000000)
-#threading.stack_size(2 ** 20)
+
 
 SCALE = 0.95
 def play_timeline(scene, timeline):
