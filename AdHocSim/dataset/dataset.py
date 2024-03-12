@@ -125,7 +125,11 @@ def createPacketData(gPath,gTime,gThroughput,gNodeCount,gPacket):
                     messagesToSend = []
                     # given we want to talk to so many unique people per second, let's get some subset of nodes to communicate to that has a mean of this
                     
-                    thisSecondsRecipetents = random.sample(choiceOfNodes,amountToChoose[time])
+                    if amountToChoose[time] > len(choiceOfNodes):
+                        atc = len(choiceOfNodes)
+                    else:
+                        atc = amountToChoose[time]
+                    thisSecondsRecipetents = random.sample(choiceOfNodes,atc)
 
                     for recipitent in thisSecondsRecipetents:
                         # how many packets a given frame will be

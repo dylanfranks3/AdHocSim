@@ -4,7 +4,14 @@ from manim import *
 from manim.utils.file_ops import open_file as open_media_file 
 from utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
 from collections.abc import Iterable
+from scipy.interpolate import splprep, splev, interp1d
+import matplotlib.pyplot as plt
 
+config.disable_caching = True
+import sys
+import threading
+#sys.setrecursionlimit(1000000000)
+#threading.stack_size(2 ** 20)
 
 SCALE = 0.95
 def play_timeline(scene, timeline):
@@ -69,12 +76,14 @@ class networkVisualiser(Scene):
         super().__init__(**kwargs)
 
         self.simulation = simulation
+        self.allNodes = []
+        self.packets = []
 
         self.requests = self.simulation.historicRequests.copy()
         self.requests = sorted(self.requests,key=lambda x: x[0])
 
         self.nodes = self.simulation.network.nodeContainer
-        self.timeScale = 5 # n times faster than the real sim
+        self.timeScale = 10 # n times faster than the real sim
 
         # scale the nodes in x and y direction
         self.scaleNodesX = None
@@ -89,9 +98,9 @@ class networkVisualiser(Scene):
     
     def construct(self):
         
-        self.plane()
-        self.counter()
-        self.wait(1)
+        #self.plane()
+        #self.counter()
+        #self.wait(1)
         self.makeSimulation()
 
     
@@ -179,11 +188,6 @@ class networkVisualiser(Scene):
 
 
 
-        
-
-
-        
-
         newXDist = tr[0]-tl[0]
         newYDist = tr[1]-br[1]
         centreOfRect = ((tl[0] + tr[0])/2,(tl[1] + br[1])/2)
@@ -194,154 +198,241 @@ class networkVisualiser(Scene):
         scaley = 6/newXDist
         self.scaleNodesX = scalex * SCALE
         self.scaleNodesY = scaley * SCALE
+
+    
+    def createNodeAnims(self):
+        allDotAnims = []
+        for i in self.nodes:
+            historicLocation = [self.fixNodeCoord(j.location) for j in i.historicLocation if j is not None]  
+            path = VMobject()   
+            path.set_points_smoothly(historicLocation)
+
+            d = Dot().set_color(ORANGE)
+            i.visualDot = d
+            self.add(i.visualDot,path)
+            self.allNodes.append(i)
+            anim = MoveAlongPath(d,path).set_rate_func(linear)
+            allDotAnims.append(anim)
+
+        return (allDotAnims)
+
+    
+
+    def createPacketMovements(self):
+        def update_path_c(dot1,dot2):
+                    def updater(mob,dt):
+                        mob.set_points_smoothly([dot1.get_center(), dot2.get_center()])
+                    return updater
+        
+        timeline = {}
+        
         
 
-    def getDot(self,arr,gUid): # from an array of Dots, find the Dot with given loc
-        for i in arr:
-            if i.uid == gUid:
-                return i
-        return False
-    
+        for request in self.requests:
+            if request[1].__func__ == network.Network.sendPacketDirectCall and request[2].uid == 1:
+                fromNode = request[2]
+                toNode = request[3]
+                fromDot = self.getNode(fromNode).visualDot
+                toDot = self.getNode(toNode).visualDot
+            
+                packetPath = VMobject()
+                packetPath.set_points_smoothly([fromDot.get_center(),toDot.get_center()]).set_opacity(0)
+                #packetPath
 
-    
-    def findByUid(self,arr, gUid):
-        for idx,i in enumerate(arr):
-            if i[0] == gUid:
-                return idx
-        else:
-            return False
+                packetPath.add_updater(update_path_c(fromDot,toDot))
 
-    def shift_up(self,mobject,loc):
-        return mobject.shift(loc)
-    
-    
+                vt = ValueTracker(0)
+
+                c = Dot().set_color(RED)
+                #c.set_opacity(0)
+
+                self.add(c,packetPath)
+
+                c.add_updater(lambda mob: mob.move_to(packetPath.point_from_proportion(vt.get_value()))) # Using RED for visibility
+                
+                anim0 = AnimationGroup(c.animate(run_time=0.1).set_opacity(1).build())
+                anim1 = AnimationGroup(vt.animate(run_time=2,rate_func=linear).set_value(1).build())
+                anim2 = AnimationGroup(c.animate(run_time=0.1).set_opacity(0).build())
+
+                
+                if request[0]/self.timeScale in timeline:
+                    timeline[request[0]/self.timeScale] = [*timeline[request[0]/self.timeScale],anim1,anim0]
+                else:
+                    timeline[request[0]/self.timeScale] = [anim1,anim0]
+
+                if request[0]/self.timeScale+2 in timeline:
+                    timeline[request[0]/self.timeScale+2] = [*timeline[request[0]/self.timeScale],anim2]
+                else:
+                    timeline[request[0]/self.timeScale+2] = [anim2]
+        return timeline
+                
+
 
 
     def makeSimulation(self):
-        allNodes = [] # 2d array, uid, Dot
-        allAnimations = []
-        finishedTime = self.requests[-1][0]
+        def getNode(gNode):
+            for i in self.allNodes:
+                if i.uid == gNode.uid:
+                    return i
+            return False
 
-        # iterate through each interval of the sim
-        intervalInVisualisation = (self.simulation.interval/self.timeScale) # how long each interval is in the visualisation
-        for idx,i in enumerate(range(0,math.ceil(finishedTime/self.simulation.interval) + 1)):
-            dotsAnims = []
-            packetAnims = []
-            packetRemove = []
-            while len(self.requests) > 0 and float(self.requests[0][0]) <= float(i):
-
-                cRequest = self.requests[0]      
-                if cRequest[1].__func__ == node.Node.updateLocation: # if this is a node moving animation
-                    movedNode = cRequest[1].__self__
-                    gLoc = cRequest[2].location
-                    if not self.findByUid(allNodes,movedNode.uid): # if the node hasn't been seen before
-                        fixedGLoc = self.fixNodeCoord(gLoc)
-                        gUid = movedNode.uid
-                        nodeDot  = Dot(fixedGLoc).scale(1.5)
-                        allNodes.append([gUid,nodeDot])
-
-                    originalDotIndex = self.findByUid(allNodes,movedNode.uid)
-                    originalDot = allNodes[originalDotIndex][1] # the dot element of our found node
-                    newLoc = self.fixNodeCoord(gLoc) 
-                    animation = prepare_animation(originalDot.animate(run_time=intervalInVisualisation*5).move_to(newLoc))
-                    dotsAnims.append(animation)
+        def update_path_c(dot1,dot2):
+            def updater(mob,dt):
+                mob.set_points_smoothly([dot1.get_center(), dot2.get_center()])
+            return updater
 
 
-                # packets moving
-                if cRequest[1].__func__ == network.Network.sendPacketDirectCall: # if this is a sending packets animation
-                    fromNode = cRequest[2]
-                    toNode = cRequest[3]
-                    fromNodeLocation = self.fixNodeCoord(cRequest[4])
-                    toNodeLocation = self.fixNodeCoord(cRequest[5])
-                        
-                    if not self.findByUid(allNodes,fromNode.uid): # if the node hasn't been seen before
-                        gLoc = cRequest[4]
-                        fixedGLoc = self.fixNodeCoord(gLoc)
-                        gUid = fromNode.uid
-                        nodeDot  = Dot(fixedGLoc).scale(1.5)
-                        allNodes.append([gUid,nodeDot])
+        self.allNodes = self.nodes
+    
+        allDotAnims = []
+        for idx,i in enumerate(sorted(self.allNodes,key=lambda i: i.uid)):
+            historicLocation = [self.fixNodeCoord(j.location) for j in i.historicLocation if j is not None]
+            historicLocation = historicLocation[:int(len(historicLocation)/4)]  
+            path = VMobject()   
+            path.set_points_smoothly(historicLocation).set_opacity(0)
 
-                    if not self.findByUid(allNodes,toNode.uid): # if the node hasn't been seen before
-                        gLoc = cRequest[5]
-                        fixedGLoc = self.fixNodeCoord(gLoc)
-                        gUid = toNode.uid
-                        nodeDot  = Dot(fixedGLoc).scale(1.5)
-                        allNodes.append([gUid,nodeDot])
-
-                    def distFromS(dot,dt):
-                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
-                        #dot.set_opacity(1)
-                        if proportion >= 0.05:
-                            dot.set_opacity(1)
-
-                    def distFromx(dot,dt):
-                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
-                        if proportion <= 0.01:
-                            dot.set_opacity(0)
-                    
-                    def distFromE(dot,dt):
-                        proportion = np.linalg.norm(dot.get_center() - dot.s) / np.linalg.norm(dot.s-dot.e)
-                        if proportion >= 0.95:
-                            dot.set_opacity(0)
-
-                    d = Dot(fromNodeLocation,color=RED).scale(0.5)
-                    #self.add(d)
-                    d.s = fromNodeLocation
-                    d.e = toNodeLocation
-                    #d.add_updater(distFromS)
-                    #d.add_updater(distFromx)
-                    #d.add_updater(distFromE)
-
-                    animation = prepare_animation(d.animate(run_time=intervalInVisualisation*30).move_to(toNodeLocation))
-                    animation.start_time = intervalInVisualisation*i
-                    animation.end_time = intervalInVisualisation*i + intervalInVisualisation*10
-                    packetAnims.append(animation)
-                    
-                    packetRemove.append(Animation(d.set_opacity(0),run_time=intervalInVisualisation))
-                    
-                    
-                    
-                    
-                    
-                self.requests.pop(0) 
+            d = Dot().set_color(ORANGE)
             
+            i.visualDot = d
+            self.add(i.visualDot,path)
+            anim = MoveAlongPath(d,path).set_rate_func(linear)
+            allDotAnims.append(anim)   
 
+        self.allNodes = sorted(self.allNodes,key=lambda i: i.uid)
 
-            allAnimations.append([dotsAnims,packetAnims,packetRemove])
+        timeline = {}
+        timeline[0.0] = [AnimationGroup(*allDotAnims,run_time=self.requests[-1][0]/self.timeScale)]
+        
 
+        for idx,request in enumerate(self.requests):
+            if request[1].__func__ == network.Network.sendPacketDirectCall: #and request[2].uid == 1:
+                fromNode = request[2]
+                toNode = request[3]
+                fromDot = getNode(fromNode).visualDot
+                toDot = getNode(toNode).visualDot
 
-
-
+                path = VMobject()
+                path.set_points_smoothly([fromDot.get_center(),toDot.get_center()])
+                path.set_opacity(0)
+                path.add_updater(update_path_c(fromDot,toDot))
+                vt = ValueTracker(0)
+                c = Dot().set_color(RED).scale(0.5)
+                self.add(c,path)
+                c.add_updater(lambda mob, vt=vt, path=path, toDot=toDot, c=c: mob.move_to(path.point_from_proportion(vt.get_value())))# Using RED for visibility
+                anim1 = AnimationGroup(vt.animate(run_time=2,rate_func=linear).set_value(1).build())
             
+                if request[0]/self.timeScale in timeline:
+                    timeline[request[0]/self.timeScale] = [*timeline[request[0]/self.timeScale],anim1]
+                else: 
+                    timeline[request[0]/self.timeScale] = [anim1]
             
-            
-            
-            
-            
-            print (i)
-
-            # here we combine all the animations together and schedule them, check if the time has things scheduled
-            if i == 30:
-                finalAnim = {}
-                for idx,i in enumerate(allAnimations): 
-                    if idx*intervalInVisualisation*5 in finalAnim:
-                        finalAnim[idx*intervalInVisualisation*5] = finalAnim[idx*intervalInVisualisation*5] + [*i[1],*i[0]]
-                    else:
-                        finalAnim[idx*intervalInVisualisation*5] = [*i[0],*i[1]]
-                    if idx*intervalInVisualisation*5+intervalInVisualisation*30 in finalAnim:
-                        finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] = finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] + [*i[2]]
-                    else:
-                        finalAnim[idx*intervalInVisualisation*5 +intervalInVisualisation*30 ] = [*i[2]]
+                if len(timeline) > 40:
+                    break
+        
 
 
-                play_timeline(self,finalAnim)
-                self.wait()
-                
                 
 
-                return
+
+        '''
+        timeline = {}
+        for idx,request in enumerate(self.requests):
+            if request[1].__func__ == network.Network.sendPacketDirectCall and request[2].uid == 1:
+                fromNode = request[2]
+                toNode = request[3]
+                fromDot = getNode(fromNode).visualDot
+                toDot = getNode(toNode).visualDot
+
+                
+            
+                packetPath = VMobject()
+                packetPath.set_points_smoothly([fromDot.get_center(),toDot.get_center()]).set_opacity(0)
+
+                packetPath.add_updater(update_path_c(fromDot,toDot))
+
+                vt = ValueTracker(0)
+
+                c = Dot().set_color(RED)
+                c.set_opacity(0)
+
+                self.add(c,packetPath)
+
+                c.add_updater(lambda mob: mob.move_to(packetPath.point_from_proportion(vt.get_value()))) # Using RED for visibility
+                
+                #anim0 = AnimationGroup(c.animate(run_time=0.1).set_opacity(1).build())
+                anim1 = AnimationGroup(vt.animate(run_time=2,rate_func=linear).set_value(1).build())
+                #anim2 = AnimationGroup(c.animate(run_time=0.1).set_opacity(0).build())
+
+                print (request[0]/self.timeScale)
+                
+                if request[0]/self.timeScale in timeline:
+                    timeline[request[0]/self.timeScale] = [*timeline[request[0]/self.timeScale],anim1]#anim0]
+                else:
+                    timeline[request[0]/self.timeScale] = [anim1]#,anim0]
+
+                #if request[0]/self.timeScale+2 in timeline:
+                #    timeline[request[0]/self.timeScale+2] = [*timeline[request[0]/self.timeScale],anim2]
+                #else:
+                #    timeline[request[0]/self.timeScale+2] = [anim2]
+                #print (idx)
+                 
+        
+        
+
+        lengthOfSim = self.requests[-1][0]
+        nodeAnims = allDotAnims # THIS DOESN'T HAVE A RUN TIME, WE NEED TO SET IT
+        packetAnims = {2:anim1}#timeline
+        
+        
+        #print (packetAnims)
+        
+    
+
+        packetAnims[0] = AnimationGroup(*nodeAnims,run_time=lengthOfSim/self.timeScale)
+        print (packetAnims)
+        
+        '''
+        
+        
+        
+        print (timeline)
+
+        play_timeline(self,timeline)
+        
+
+
+
+                      
+
+
+        
+
+
+
+            
+
+
+
+            
+
             
             
+        
+
+        
+        
+
+
+        
+
+
+        
+        
+
+
+            
+
+              
             
 
             
@@ -471,13 +562,12 @@ def buildSim(dataDirectory,model,visualise,logging):
     if logging == True:
         print (s.showState())
 
-        
-    #print ("Unexecuted requests: " + str(len(s.requests)))
 
     scene = networkVisualiser(s)
     scene.render()
     
     
+
     
 
 
