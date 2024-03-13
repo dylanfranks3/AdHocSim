@@ -3,6 +3,7 @@ from AdHocSim.nanNode import *
 from AdHocSim import packet, location
 
 
+
 class NANNetwork(Network):
     def __init__(self):
         super().__init__()
@@ -19,14 +20,55 @@ class NANNetwork(Network):
         # initially put them into clusters
         self.makeInitialClusters()
 
-        for i in self.nodeContainer:
-            print (i.socketWaiting)
+    def clusterUpdate(self,gC):
+        aM = max(gC,key= lambda x: x.masterPreference) # get the item that's most willing to be master
+        aM.updateType(NANNodeType.AM)
+
+        reasonableDist = 2*self.calcMeanDist(gC)/len(gC)
+
+        for node in gC:
+            closestNodes = [i for i in gC if ((location.Location.distance(i.location,node.location) <= reasonableDist) and i !=node)]
+            closestNodesTypes = [i.type for i in closestNodes]
+            if node.type == NANNodeType.M:
+                if max([i.masterRank for i in closestNodes]) >= node.masterRank:
+                    node.updateType(NANNodeType.NMS)
+            elif node.type == NANNodeType.NMS:
+                if max([i.masterRank for i in closestNodes]) <= node.masterRank:
+                    node.updateType(NANNodeType.M)
+                elif max([i.masterRank for i in closestNodes]) >= node.masterRank:
+                    node.updateType(NANNodeType.NMNS)
+            elif node.type == NANNodeType.NMNS:
+                if max([i.masterRank for i in closestNodes]) <= node.masterRank:
+                    node.updateType(NANNodeType.M)
+                elif max([i.masterRank for i in closestNodes]) >= node.masterRank:
+                    node.updateType(NANNodeType.NMS)
+                
+                
+
+
+        
+
+
+
 
     def updater(self):
         # work on the roles
-        # set master preference based on 'relative' power usage
-        #for n in self.nodeContainer:
-        pass
+        
+        for node in self.nodeContainer:
+            node.masterRank = self.masterPreference*self.randomFactor
+
+        for cluster in self.clusters:
+            self.clusterUpdate(cluster)
+
+        
+        
+
+
+
+
+
+        
+        
 
     
 
@@ -52,19 +94,24 @@ class NANNetwork(Network):
         amount = packet.size / 10
         src.addPower(amount)
 
-        
-    def makeInitialClusters(self):
+    def calcMeanDist(self,arr):
         totalDistance = 0
         distancesCalced = 0
-        clusters = []
-        for n1 in self.nodeContainer:
-            for n2 in self.nodeContainer:
+        
+        for n1 in arr:
+            for n2 in arr:
                 if n1 != n2:
                     dist = location.Location.distance(n1.location,n2.location)
                     totalDistance+=dist; distancesCalced+=1
         
         meanD = totalDistance/distancesCalced
+        return meanD
+
+        
+    def makeInitialClusters(self):
+        meanD = self.calcMeanDist(self.nodeContainer)
         added = []
+        clusters = []
         # go through the nodecontainer and create clusters of nodes where the distance <= mean distance
         for n in self.nodeContainer:
             if n not in added:
@@ -80,6 +127,8 @@ class NANNetwork(Network):
             print ("inital cluster adding wrong!!!")
 
         self.clusters = clusters
+
+        print (clusters)
 
 
 

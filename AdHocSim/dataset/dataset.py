@@ -179,6 +179,7 @@ def setup(gPath, gNodeCount, gInterval, gXSize, gYSize, gTime, gPacketSize, gThr
 
 
 def createLocationData(gPath, gTime, gXSize, gYSize, gNodeCount, gInterval):
+    
     for i in range(1, gNodeCount + 1):
 
         newPath = gPath + f"/{i}/{i}.position.csv"
@@ -189,4 +190,4 @@ def createLocationData(gPath, gTime, gXSize, gYSize, gNodeCount, gInterval):
             for position in random_walk:
                 x, y = position
                 writer.writerow([time, x, y, 0])  # no 3D consideration
-                time += gInterval
+                time = time + gInterval

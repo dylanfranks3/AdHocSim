@@ -21,10 +21,12 @@ class NANNode(Node):
         self.masterPreference:float = random.uniform(0,1)
         self.masterRank:float = random.uniform(0,1)
         self.powerUsed:float = random.uniform(0,10000) # give it a random amount of power used
-        
+
 
     def addPower(self,usage:float):
         self.powerUsed += usage
+        if self.masterPreference >= 0.2:
+            self.masterPreference -= 0.02
 
     def updateType(self,newType):
         self.historicType.append(newType)

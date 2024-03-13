@@ -74,4 +74,6 @@ if __name__ == "__main__":
     packetSize = args["packetSize"]
     throughput = args["volume"]
 
+    
+
     setup(path, nodeCount, interval, xSize, ySize, time, packetSize, throughput)

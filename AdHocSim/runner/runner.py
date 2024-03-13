@@ -2,7 +2,7 @@ from AdHocSim import network, simulator, nanNetwork, location, packet, node, nan
 import os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file
-from utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
+from AdHocSim.runner.utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
 from collections.abc import Iterable
 from scipy.interpolate import splprep, splev, interp1d
 import matplotlib.pyplot as plt
@@ -329,13 +329,13 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
         return
 
     getNodes(s, n, dataDirectory,model)
-    if model=='NAN':n.setup()
 
-    
+    if model=='NAN': n.setup()
+
     s.run()
 
-    if logging == True:
-        print(s.showState())
+    print ("sim exited before visuals")
+    exit()
 
     if visualise:
         scene = networkVisualiser(s)

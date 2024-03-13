@@ -58,8 +58,8 @@ class Simulator:
     def run(self):  # call this to run the sim
         while self.time <= self.length:
             self.manageRequests()  # process requests that are currently scheduled
-            self.incrementTime()  # increase the time by self.interval
             self.network.updater()
+            self.incrementTime()  # increase the time by self.interval
         if self.output:
             self.showState()
 
@@ -72,6 +72,7 @@ class Simulator:
     
     # TODO maybe overload the print function
     def showState(self):
+        '''
         print(
             f"""HIGH-LEVEL NETWORK:
 No. of nodes: {len(self.network.nodeContainer)}
@@ -84,19 +85,22 @@ Requests in simulation: {len(self.requests)}
 
 NODES:"""
         )
+        '''
 
         for index, node in enumerate(self.network.nodeContainer):
             print(f"NODE {node.uid}:")
             for k, v in node.data.items():
                 print(f"{k}: {len(v)}")
-            print("")
-            print("SRC   | DEST  | SIZE")
-            for packet in node.socketWaiting:
-                print(f"NODE{packet.src.uid} | NODE{packet.dest.uid} | {packet.size}")
-            print("")
+            print ("")
+            
+            #print("")
+            #print("SRC   | DEST  | SIZE")
+            #for packet in node.socketWaiting:
+            #    print(f"NODE{packet.src.uid} | NODE{packet.dest.uid} | {packet.size}")
+            #print("")
 
             # TODO add more functionality showing packet logging
             # for k,v in node.data.items():
             #    print (f'{k} : {" ".join([" "self.readablePacket(i) for i in v])}')
 
-        print("---------------------------------------")
+        #print("---------------------------------------")
