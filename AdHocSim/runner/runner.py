@@ -332,10 +332,12 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
 
     if model=='NAN': n.setup()
 
-    s.run()
-
-    print ("sim exited before visuals")
-    exit()
+    try:
+        s.run()
+    except Exception as e:
+        print ("ERROR in Simulation:\n")
+        print (e)
+        exit()
 
     if visualise:
         scene = networkVisualiser(s)

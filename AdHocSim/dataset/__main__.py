@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse, os
-from AdHocSim.dataset.dataset import setup
+from AdHocSim.dataset.dataset import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DATASET CLI TOOL")

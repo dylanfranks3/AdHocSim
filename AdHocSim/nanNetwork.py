@@ -9,41 +9,67 @@ class NANNetwork(Network):
         super().__init__()
         self.clusters = None # to be setup()
         self.randomFactor = random.uniform(0,1)
-        
+        self.communicatingDistance = 50 # the radius of communication
+    
     
     def setup(self):
         # give each node a random ranking 
         for i in self.nodeContainer:
-            i.randomFactor = self.randomFactor
+            i.randomFactor = random.uniform(0,1)
             i.masterRank = i.randomFactor*i.masterRank
 
         # initially put them into clusters
-        self.makeInitialClusters()
+        self.makeClusters()
 
     def clusterUpdate(self,gC):
+        # if we're at the end of the simulation, store the type
+        if self.simulator.time == self.simulator.length:
+            print ("time")
+            for node in gC:
+                node.historicType[-1][1] = self.simulator.length - node.historicType[-1][1]
+            return 
+        
+
         aM = max(gC,key= lambda x: x.masterPreference) # get the item that's most willing to be master
-        aM.updateType(NANNodeType.AM)
-
-        reasonableDist = 2*self.calcMeanDist(gC)/len(gC)
-
+        if aM.type!=NANNodeType.AM:
+            aM.updateType(NANNodeType.AM,self.simulator.time,self.simulator.interval)
+        
         for node in gC:
-            closestNodes = [i for i in gC if ((location.Location.distance(i.location,node.location) <= reasonableDist) and i !=node)]
-            closestNodesTypes = [i.type for i in closestNodes]
-            if node.type == NANNodeType.M:
-                if max([i.masterRank for i in closestNodes]) >= node.masterRank:
-                    node.updateType(NANNodeType.NMS)
+            # add the constant power of always listening 
+            node.powerUsed += node.constantPower
+
+            # the cost of sending frames every interval of sim
+            discoveryFrame = ((8*31)/250000)*38*(len(gC)-1)*self.simulator.interval
+            syncFrame = ((8*31)/250000)*38*(len(gC)-1)*self.simulator.interval
+            if node.type == NANNodeType.AM or node.type == NANNodeType.M:
+                node.addPower(syncFrame+discoveryFrame)
             elif node.type == NANNodeType.NMS:
-                if max([i.masterRank for i in closestNodes]) <= node.masterRank:
-                    node.updateType(NANNodeType.M)
-                elif max([i.masterRank for i in closestNodes]) >= node.masterRank:
-                    node.updateType(NANNodeType.NMNS)
-            elif node.type == NANNodeType.NMNS:
-                if max([i.masterRank for i in closestNodes]) <= node.masterRank:
-                    node.updateType(NANNodeType.M)
-                elif max([i.masterRank for i in closestNodes]) >= node.masterRank:
-                    node.updateType(NANNodeType.NMS)
+                node.addPower(syncFrame)
+            
                 
-                
+
+        
+            # changing the node types
+            closestNodes = [i for i in gC if ((location.Location.distance(i.location,node.location) <= self.communicatingDistance) and i != node)] # get the nodes that are 'nearby'
+            large = [i.masterRank for i in closestNodes] # the masterRank of all nodes near the current
+            if len(large) > 0:
+                large = max([i.masterRank for i in closestNodes]) # highest master rank in current cluster
+                if node.type == NANNodeType.M:
+                    if large >= node.masterRank:
+                        node.updateType(NANNodeType.NMS,self.simulator.time,self.simulator.interval)
+                elif node.type == NANNodeType.NMS:
+                    if large <= node.masterRank:
+                        node.updateType(NANNodeType.M,self.simulator.time,self.simulator.interval)
+                    elif large >= node.masterRank:
+                        node.updateType(NANNodeType.NMNS,self.simulator.time,self.simulator.interval)
+                elif node.type == NANNodeType.NMNS:
+                    if large <= node.masterRank:
+                        node.updateType(NANNodeType.M,self.simulator.time,self.simulator.interval)
+                    elif large >= node.masterRank:
+                        node.updateType(NANNodeType.NMS,self.simulator.time,self.simulator.interval)
+                    
+    
+
 
 
         
@@ -52,32 +78,26 @@ class NANNetwork(Network):
 
 
     def updater(self):
+        def powerUsedAsADec(n):
+            if n.totalPower-n.powerUsed == 0:
+                print ("used all the power - there's a problem")
+            else:
+                return (n.totalPower-n.powerUsed)/n.totalPower
         # work on the roles
-        
         for node in self.nodeContainer:
-            node.masterRank = self.masterPreference*self.randomFactor
+            node.masterRank = node.masterPreference*random.uniform(0,1)*powerUsedAsADec(node)
 
+        self.makeClusters()
         for cluster in self.clusters:
             self.clusterUpdate(cluster)
 
-        
-        
 
 
-
-
-
-        
-        
-
-    
-
-
-    #overriding
+    #overriding parent method
     # sending packets directly between nodes
     def sendPacketDirect(self, src: NANNode, dest: NANNode, packet: packet.Packet):
         src.removePacket(packet)
-        latency = self.calculateLatency()
+        latency = self.calculateLatency(packet)
         self.simulator.request(
             latency, dest.addPacket, packet
         )  # add the packet to the recipetent
@@ -90,55 +110,60 @@ class NANNetwork(Network):
             dest.getLocation(),
         )  # tell the sim, here is the nodes and use this to build vis
 
-        # TODO work out how much power it actually uses
-        amount = packet.size / 10
+        amount = ((8*31 + packet.size)/250000)*38 # the energy cost of transmitting the packet
         src.addPower(amount)
 
-    def calcMeanDist(self,arr):
-        totalDistance = 0
-        distancesCalced = 0
-        
-        for n1 in arr:
-            for n2 in arr:
-                if n1 != n2:
-                    dist = location.Location.distance(n1.location,n2.location)
-                    totalDistance+=dist; distancesCalced+=1
-        
-        meanD = totalDistance/distancesCalced
-        return meanD
+
+    # make clusters based on whether nodes are <= communicating distance, hence the scc
+    def makeClusters(self):
+        edges = {i:[j for j in self.nodeContainer if j!=i and location.Location.distance(i.location,j.location)<self.communicatingDistance] for i in self.nodeContainer}
+        vertices = [i for i in self.nodeContainer]
+        scc = self.strongly_connected_components_iterative(vertices,edges)
+        self.clusters = [list(cluster) for cluster in scc]
+
+
+    # referenced: https://github.com/alviano/python/blob/master/rewrite_aggregates/scc.py
+    @staticmethod
+    def strongly_connected_components_iterative(vertices, edges):
+        identified = set()
+        stack = []
+        index = {}
+        boundaries = []
+
+        for v in vertices:
+            if v not in index:
+                to_do = [('VISIT', v)]
+                while to_do:
+                    operation_type, v = to_do.pop()
+                    if operation_type == 'VISIT':
+                        index[v] = len(stack)
+                        stack.append(v)
+                        boundaries.append(index[v])
+                        to_do.append(('POSTVISIT', v))
+                        # We reverse to keep the search order identical to that of
+                        # the recursive code;  the reversal is not necessary for
+                        # correctness, and can be omitted.
+                        to_do.extend(
+                            reversed([('VISITEDGE', w) for w in edges[v]]))
+                    elif operation_type == 'VISITEDGE':
+                        if v not in index:
+                            to_do.append(('VISIT', v))
+                        elif v not in identified:
+                            while index[v] < boundaries[-1]:
+                                boundaries.pop()
+                    else:
+                        # operation_type == 'POSTVISIT'
+                        if boundaries[-1] == index[v]:
+                            boundaries.pop()
+                            scc = set(stack[index[v]:])
+                            del stack[index[v]:]
+                            identified.update(scc)
+                            yield scc
+
+
+
+
+
 
         
-    def makeInitialClusters(self):
-        meanD = self.calcMeanDist(self.nodeContainer)
-        added = []
-        clusters = []
-        # go through the nodecontainer and create clusters of nodes where the distance <= mean distance
-        for n in self.nodeContainer:
-            if n not in added:
-                added.append(n)
-                currentCluster = [n]
-                for remaining in [r for r in self.nodeContainer if r not in added]:
-                    if location.Location.distance(n.location,remaining.location) <= meanD/3:
-                        currentCluster.append(remaining)
-                        added.append(remaining)
-                clusters.append(currentCluster)
-
-        if len(added) != len(self.nodeContainer):
-            print ("inital cluster adding wrong!!!")
-
-        self.clusters = clusters
-
-        print (clusters)
-
-
-
-
-
-        
-
-
-
-
-
-    
 

@@ -5,6 +5,10 @@ from manim.utils.file_ops import open_file as open_media_file
 from AdHocSim import packet
 from AdHocSim import nanNetwork
 from AdHocSim.node import Node
+from AdHocSim.nanNode import *
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # from AdHocSim import packet,nanNetwork,network
 
@@ -57,6 +61,7 @@ class Simulator:
 
     def run(self):  # call this to run the sim
         while self.time <= self.length:
+            print (self.time)
             self.manageRequests()  # process requests that are currently scheduled
             self.network.updater()
             self.incrementTime()  # increase the time by self.interval
@@ -72,26 +77,27 @@ class Simulator:
     
     # TODO maybe overload the print function
     def showState(self):
-        '''
-        print(
-            f"""HIGH-LEVEL NETWORK:
-No. of nodes: {len(self.network.nodeContainer)}
-Time in simulation: {self.time}
-Length of simulation: {self.length}
-Interval in simulation: {self.interval}
-Requests in simulation: {len(self.requests)}
+        
 
----------------------------------------
+        
 
-NODES:"""
-        )
-        '''
 
+        
+        
+        return
         for index, node in enumerate(self.network.nodeContainer):
             print(f"NODE {node.uid}:")
             for k, v in node.data.items():
                 print(f"{k}: {len(v)}")
+            print (node.historicType)
+            print (node.powerUsed)
+            print (node.masterPreference)
             print ("")
+            print ("")
+            print ("")
+            print ("")
+            
+            
             
             #print("")
             #print("SRC   | DEST  | SIZE")
@@ -102,5 +108,6 @@ NODES:"""
             # TODO add more functionality showing packet logging
             # for k,v in node.data.items():
             #    print (f'{k} : {" ".join([" "self.readablePacket(i) for i in v])}')
-
+            
         #print("---------------------------------------")
+        

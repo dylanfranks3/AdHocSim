@@ -139,6 +139,7 @@ def createPacketData(gPath, gTime, gThroughput, gNodeCount, gPacket):
                     atc = len(choiceOfNodes)
                 else:
                     atc = amountToChoose[time]
+                atc = abs(atc)
                 thisSecondsRecipetents = random.sample(choiceOfNodes, atc)
 
                 for recipitent in thisSecondsRecipetents:
