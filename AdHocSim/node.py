@@ -37,7 +37,9 @@ class Node:
     def removePacket(self, packet: Packet):
         self.socketWaiting = [i for i in self.socketWaiting if i != packet]
         self.data["SOUT"].append([packet,self.time])  # say that it's leaving the socket
-
+  
+  
+  
     def addPacket(self, packet:Packet):
         if packet.dest == self:
             if packet not in self.data["SIN"]:

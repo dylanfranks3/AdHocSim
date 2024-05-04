@@ -8,8 +8,10 @@ import numpy as np
 
 
 def analytics(path,s):
+
+    print ("\n"*5)
     noNodes = str(len(s.network.nodeContainer))
-    pathToAnalytics = path+'/'+str(int(time.time()))
+    pathToAnalytics = path+'/'+str(int(time.time()))+f'({str(noNodes)} Nodes)'
     os.mkdir(pathToAnalytics)
 
     n = s.network # get the network
@@ -31,13 +33,13 @@ def totalTimeInType(path,s):
 
     allNodeTypes = d
     df = DataFrame.from_dict(allNodeTypes, orient='index',columns=["Master", "Anchor Master", "Non-Master Sync", "Non-Master Non-Sync"])
-    df.to_csv(path+f'/timeInRoles{noNodes}.csv')
+    df.to_csv(path+f'/timeInRoles.csv')
 
 
 def calculateThroughput(path,s):
     interval = s.interval
     # dict of {interval1:{node1:[],node2:[]...},interval2}
-    dataOut = {interval*i:{j:0 for j in range(1,len(s.network.nodeContainer)+1)} for i in range(0,(s.length+1)/interval)}
+    dataOut = {interval*i:{j.uid:0 for j in s.network.nodeContainer} for i in range(0,int((s.length+1)/interval))}
     nC = s.network.nodeContainer
     for node in nC:
         for d in node.data["SOUT"]:
@@ -54,7 +56,7 @@ def calculateThroughput(path,s):
 
     # first half sim throughput
     givenT = 0
-    for intervalTime in dataOut.keys()[:int(len(dataOut)/2)]:
+    for intervalTime in list(dataOut.keys())[:int(len(dataOut)/2)]:
         count = 0 
         for n in dataOut[intervalTime]:
             count += 1
@@ -63,7 +65,7 @@ def calculateThroughput(path,s):
 
     # second half sim throughput
     givenT = 0
-    for intervalTime in dataOut.keys()[int(len(dataOut)/2):]:
+    for intervalTime in list(dataOut.keys())[int(len(dataOut)/2):]:
         count = 0 
         for n in dataOut[intervalTime]:
             count += 1
@@ -71,8 +73,8 @@ def calculateThroughput(path,s):
     secondHalfThroughput = (givenT/(count))/(s.length/2)
 
     # get the throughput every 50 seconds
-    throughput = {i:0 for i in range(50,50,s.length+1)} 
-    for i in range(50,50,s.length+1):
+    throughput = {i:0 for i in range(50,int(s.length)+1,50)} 
+    for i in range(50,int(s.length)+1,50):
         currentI = dataOut[i]
         throughputI = 0
         count = 0 
@@ -86,7 +88,7 @@ def calculateThroughput(path,s):
     throughputDF = DataFrame(throughput, index=[0])
     noNodes = str(len(s.network.nodeContainer))
     throughputDF.index = [f'{noNodes}']
-    throughputDF.to_csv(path+f'/throughput{noNodes}.csv') 
+    throughputDF.to_csv(path+f'/throughput.csv') 
 
     
 def calculatePower(path,s):
@@ -94,82 +96,81 @@ def calculatePower(path,s):
 
     power = {i.uid:{"Constant Role Power Usage":0,
              "Role Change Power Usage": 0,
-             "Transmission Power Usage": 0} for i in  s.network.nodeCluster}
+             "Transmission Power Usage": 0} for i in  s.network.nodeContainer}
     
-    for node in s.network.nodeCluster:
+    for node in s.network.nodeContainer:
         power[node.uid]["Constant Role Power Usage"] = node.roleCost
         power[node.uid]["Role Change Power Usage"] = node.stateChangeCost
         power[node.uid]["Transmission Power Usage"] = node.transmissionCost
 
 
     pd = DataFrame.from_dict(power,orient='index')
-    pd.to_csv(path+f'/power{noNodes}.csv')
+    pd.to_csv(path+f'/power.csv')
 
 
 
 def calculateFairness(path,s):
     interval = s.interval
     # dict of {interval1:{node1:[],node2:[]...},interval2}
-    dataOut = {interval*i:{j:0 for j in range(1,len(s.network.nodeContainer)+1)} for i in range(0,(s.length+1)/interval)}
+    dataOut = {interval*i:{j.uid:0 for j in s.network.nodeContainer} for i in range(0,int((s.length+1)/interval))}
     nC = s.network.nodeContainer
     for node in nC:
-        for d in node.data["SOUT"]:
-            dataOut[d[1]][node.uid] += d[0].size
-    
+        for p in node.data["SOUT"]:
+            dataOut[p[1]][node.uid] += p[0].size
+
+
     # entire sim fairness
-    numer = 0
-    denom = 0 
+    nodeThroughput = [0 for i in range(len(nC))]
     for intervalTime in dataOut:
-        count = 0
-        for n in dataOut[intervalTime]:
-            count += 1
-            numer += (dataOut[intervalTime][n]/interval)
-            denom += (dataOut[intervalTime][n]/interval)**2
-    entireFairness = numer**2/(denom*count)
+        for n in nC:
+            
+            nodeThroughput[n.uid-1] += dataOut[intervalTime][n.uid]
+    
+    numer = sum(nodeThroughput)**2
+    denom = sum([i**2 for i in nodeThroughput])*len(nC)
+    entireFairness = numer/denom
+    
 
     # first half sim fairness
-    numer = 0
-    denom = 0 
-    for intervalTime in dataOut.keys()[:int(len(dataOut)/2)]:
-        count = 0
-        for n in dataOut[intervalTime]:
-            count += 1
-            numer += (dataOut[intervalTime][n]/interval)
-            denom += (dataOut[intervalTime][n]/interval)**2
-    firstHalfFairness = numer**2/(denom*count)
+    nodeThroughput = [0 for i in range(len(nC))]
+    for intervalTime in list(dataOut.keys())[:int(len(dataOut)/2)]:
+        for n in nC:
+            nodeThroughput[n.uid-1] += dataOut[intervalTime][n.uid]
+    numer = sum(nodeThroughput)**2
+    denom = sum([i**2 for i in nodeThroughput])*len(nC)
+    firstHalfFairness = numer/denom
+
 
     # second half sim fairness
-    numer = 0
-    denom = 0 
-    count = 0
-    for intervalTime in dataOut.keys()[int(len(dataOut)/2):]:
-        for n in dataOut[intervalTime]:
-            count += 1
-            numer += (dataOut[intervalTime][n]/interval)
-            denom += (dataOut[intervalTime][n]/interval)**2
-    secondHalfFairness = numer**2/(denom*count) 
+    nodeThroughput = [0 for i in range(len(nC))]
+    for intervalTime in list(dataOut.keys())[int(len(dataOut)/2):]:
+        for n in nC:
+            nodeThroughput[n.uid-1] += dataOut[intervalTime][n.uid]
+    numer = sum(nodeThroughput)**2
+    denom = sum([i**2 for i in nodeThroughput])*len(nC)
+    secondHalfFairness = numer/denom
 
 
     # get the fairness every 50 seconds
-    fairness = {i:0 for i in range(50,50,s.length+1)} 
-    for i in range(50,50,s.length+1):
-        numer = 0
-        denom = 0 
-        count = 0
-        for node in dataOut[i]:
-            count += 1
-            numer += (dataOut[intervalTime][n]/interval)
-            denom += (dataOut[intervalTime][n]/interval)**2
+    fairness = {i:[0 for i in range(len(nC))] for i in range(50,int(s.length)+1,50)} 
+    for i in range(50,int(s.length)+1,50):
+        for n in nC:
+            fairness[i][n.uid-1] += dataOut[i][n.uid]
 
-        f = numer**2/(denom*count)   
-        fairness[i] = [f]
+    print (fairness)
+    finalfairness = {}
+    for k in fairness:
+        numer = sum(fairness[k])**2
+        denom = sum([i**2 for i in fairness[k]])*len(nC)
+        finalfairness[k] = numer/denom
+
     
     # add the 1st half and second half data 
-    fairness.update({'1stHalf':firstHalfFairness,'2ndHalf':secondHalfFairness,'entireSim':entireFairness})
-    fairnessDF = DataFrame(fairness, index=[0])
+    finalfairness.update({'1stHalf':firstHalfFairness,'2ndHalf':secondHalfFairness,'entireSim':entireFairness})
+    fairnessDF = DataFrame(finalfairness, index=[0])
     noNodes = str(len(s.network.nodeContainer))
     fairnessDF.index = [f'{noNodes}']
-    fairnessDF.to_csv(path+f'/fairness{noNodes}.csv') 
+    fairnessDF.to_csv(path+f'/fairness.csv') 
     
 
 

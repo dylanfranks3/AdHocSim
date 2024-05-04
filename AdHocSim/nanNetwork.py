@@ -24,6 +24,7 @@ class NANNetwork(Network):
 
 
     def clusterUpdate(self,gC):
+        
         # if we're at the end of the simulation, store the type
         if self.simulator.time == self.simulator.length:
             for node in gC:
@@ -39,7 +40,7 @@ class NANNetwork(Network):
         aM = max(gC,key= lambda x: x.masterPreference) # get the item that's most willing to be master
         if aM.type!=NANNodeType.AM:
             aM.updateType(NANNodeType.AM,self.simulator.time,self.simulator.interval)
-            aM.addPower(10000)
+            #aM.addPower(10000)
             
         for node in gC:
             self.routePacket(node,gC) # send all the packets around
@@ -84,7 +85,7 @@ class NANNetwork(Network):
     def updater(self):
         # work on the roles
         for node in self.nodeContainer:
-            node.time += self.simulator.time # here we give it a time
+            node.time += self.simulator.interval # here we give it a time
            
             node.powerUsed += node.constantPower
             node.roleCost += node.constantPower
@@ -118,7 +119,7 @@ class NANNetwork(Network):
 
         amount = ((8*31 + packet.size)/250000)*38 # the energy cost of transmitting the packet
         src.addPower(amount)
-        src.transmissionCost(amount)
+        src.transmissionCost += amount
 
 
     # make clusters based on whether nodes are <= communicating distance, hence the scc
@@ -127,7 +128,7 @@ class NANNetwork(Network):
         vertices = [i for i in self.nodeContainer]
         scc = self.strongly_connected_components_iterative(vertices,edges)
         self.clusters = [list(cluster) for cluster in scc]
-        print ([len(i) for i in self.clusters])
+        #print ([len(i) for i in self.clusters])
 
 
     # call this every interval to send the packets waiting to be sent in socket waiting
