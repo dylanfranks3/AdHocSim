@@ -49,7 +49,7 @@ def random_walk_2d(gxmin, gxmax, gymin, gymax, gsteps, gInterval):
 
     # Step size and angle initialization
     angle = np.random.uniform(0, 2 * np.pi)
-    step_size = 1 * gInterval
+    step_size = 1 * gInterval 
 
     # Lists to store x and y coordinates
     x_positions = [x]

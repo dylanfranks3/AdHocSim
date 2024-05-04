@@ -24,7 +24,7 @@ class Simulator:
     ):
         self.network = network
         self.length = length  # length of sim
-        self.output = output  # verbose output TODO
+        self.output = output  # verbose output 
         self.interval = interval  # how large the increment is in the simulation
         self.requests = (
             []
@@ -52,8 +52,10 @@ class Simulator:
                     self.historicRequests.append(request)
 
     def incrementTime(self):
-        self.time += self.interval
+        self.time = round(self.time+ self.interval,2)
+        #print ("Node has this: ",self.network.nodeContainer[0].data)
 
+        
     def readablePacket(
         self, packet: packet.Packet
     ):  # readable packet in context of the sim
@@ -65,8 +67,7 @@ class Simulator:
             self.manageRequests()  # process requests that are currently scheduled
             self.network.updater()
             self.incrementTime()  # increase the time by self.interval
-        if self.output:
-            self.showState()
+        
 
     def findNode(self, guid: int):  # find a node given a uid
         for gNode in self.network.nodeContainer:
@@ -75,39 +76,7 @@ class Simulator:
         return False
 
     
-    # TODO maybe overload the print function
     def showState(self):
-        
-
-        
-
-
-        
-        
+        # future feature
         return
-        for index, node in enumerate(self.network.nodeContainer):
-            print(f"NODE {node.uid}:")
-            for k, v in node.data.items():
-                print(f"{k}: {len(v)}")
-            print (node.historicType)
-            print (node.powerUsed)
-            print (node.masterPreference)
-            print ("")
-            print ("")
-            print ("")
-            print ("")
-            
-            
-            
-            #print("")
-            #print("SRC   | DEST  | SIZE")
-            #for packet in node.socketWaiting:
-            #    print(f"NODE{packet.src.uid} | NODE{packet.dest.uid} | {packet.size}")
-            #print("")
-
-            # TODO add more functionality showing packet logging
-            # for k,v in node.data.items():
-            #    print (f'{k} : {" ".join([" "self.readablePacket(i) for i in v])}')
-            
-        #print("---------------------------------------")
         

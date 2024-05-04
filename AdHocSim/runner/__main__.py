@@ -48,6 +48,14 @@ if __name__ == "__main__":
         required=False,
         default=False,
     )
+    parser.add_argument(
+        "-a",
+        "--analytics",
+        help="arg whether to save a .csv of the data produced",
+        type=str,
+        required=False,
+        default="",
+    )
 
     args = vars(parser.parse_args())
 
@@ -57,5 +65,6 @@ if __name__ == "__main__":
     logging = args["logging"]
     interval = args["interval"]
     length = args["length"]
+    analytics = args["analytics"]
 
-    runner.buildSim(dataDirectory, model, visualise, logging, interval, length)
+    runner.buildSim(dataDirectory, model, visualise, logging, interval, length, analytics)

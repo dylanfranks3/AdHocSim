@@ -54,7 +54,7 @@ if __name__ == "__main__":
         choices=["low", "med", "high"],
         required=False,
         default="med",
-    )  # TODO write about this in dis, average packet size
+    )  
     parser.add_argument(
         "-v",
         "--volume",

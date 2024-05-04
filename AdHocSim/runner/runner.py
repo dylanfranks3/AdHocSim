@@ -3,6 +3,7 @@ import os, math, random
 from manim import *
 from manim.utils.file_ops import open_file as open_media_file
 from AdHocSim.runner.utils.minimumBoundingBox import MinimumBoundingBox, rotate_points
+from AdHocSim.runner.utils.createAnalytics import analytics
 from collections.abc import Iterable
 from scipy.interpolate import splprep, splev, interp1d
 import matplotlib.pyplot as plt
@@ -300,7 +301,7 @@ class Count(Animation):
         self.mobject.set_value(value)
 
 
-def buildSim(dataDirectory, model, visualise, logging, interval, length):
+def buildSim(dataDirectory, model, visualise, logging, interval, length, makeAnalytics):
     
     if model == "normal":
         n = network.Network()
@@ -331,17 +332,16 @@ def buildSim(dataDirectory, model, visualise, logging, interval, length):
     getNodes(s, n, dataDirectory,model)
 
     if model=='NAN': n.setup()
-
-    try:
+    s.run()
+    """ try:
         s.run()
     except Exception as e:
         print ("ERROR in Simulation:\n")
-        print (e)
-        exit()
-
-    if visualise:
-        scene = networkVisualiser(s)
-        scene.render()
+        print (e) """
+        
+    if logging:s.showState()
+    if makeAnalytics != "": analytics(makeAnalytics,s)
+    if visualise:scene = networkVisualiser(s);scene.render()
 
 
 # plaintext directory, gets nodes and packets and adds them to sim/net
@@ -414,6 +414,7 @@ def getNodes(sim, net, directory,model):
                         p = packet.Packet(int(float(line[0])), newNode, destNode)
                         if model == 'normal':
                             sim.request(0, newNode.addPacket, p)
+                            
                             sim.request(
                                 int(float(line[1])),
                                 net.sendPacketDirect,
@@ -423,7 +424,13 @@ def getNodes(sim, net, directory,model):
                             )
                         elif model == 'NAN':
                             sim.request(int(float(line[1])), newNode.addPacket, p)
-
+                            """ sim.request(
+                                int(float(line[1])),
+                                net.sendPacketDirect,
+                                newNode,
+                                destNode,
+                                p,
+                            ) """
 
         
                         

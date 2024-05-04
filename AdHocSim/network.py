@@ -8,7 +8,7 @@ class Network:
         self.simulator: simulator.Simulator = None  # this is set within simulator
 
     def calculateLatency(self, gPacket:packet.Packet):
-        return round(gPacket.size/250000*4)/4 # round to the nearest 0.25
+        return round(gPacket.size/250000*(1/self.simulator.interval))/(1/self.simulator.interval)+self.simulator.interval# round to the nearest 0.25
 
     def createNewUID(self):  # probably not necessary rn
         return max(i.uid for i in self.nodeContainer) + 1
