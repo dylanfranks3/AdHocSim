@@ -9,22 +9,19 @@ class NANNetwork(Network):
         super().__init__()
         self.clusters = None # to be setup()
         self.randomFactor = 0.8
-        self.communicatingDistance = 50  # the radius of communication
+        self.communicatingDistance = 30  # the radius of communication
     
     
     def setup(self):
         # give each node a random ranking 
         for i in self.nodeContainer:
             i.randomFactor = 0.8
-            
             i.masterRank = i.randomFactor*i.masterRank
-
         # initially put them into clusters
         self.makeClusters()
 
 
     def clusterUpdate(self,gC):
-        
         # if we're at the end of the simulation, store the type
         if self.simulator.time == self.simulator.length:
             for node in gC:
@@ -93,8 +90,10 @@ class NANNetwork(Network):
             #node.masterRank = node.masterPreference*(node.unusedPower()*0.8)
             node.masterRank *= node.masterPreference*(node.unusedPower())
 
+        #print ("making clusters")
         self.makeClusters()
         for cluster in self.clusters:
+            #print ("cluster update")
             self.clusterUpdate(cluster)
             
 
