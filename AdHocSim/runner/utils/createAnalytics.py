@@ -48,29 +48,23 @@ def calculateThroughput(path,s):
     givenT = 0
     # entire sim throughput
     for intervalTime in dataOut:
-        count = 0 
         for n in dataOut[intervalTime]:
-            count += 1
             givenT += dataOut[intervalTime][n]
-    entireThroughput = (givenT/(count))/s.length
+    entireThroughput = (givenT/(len(nC)))/s.length
 
     # first half sim throughput
     givenT = 0
     for intervalTime in list(dataOut.keys())[:int(len(dataOut)/2)]:
-        count = 0 
         for n in dataOut[intervalTime]:
-            count += 1
             givenT += dataOut[intervalTime][n]
-    firstHalfThroughput = (givenT/(count))/(s.length/2)
+    firstHalfThroughput = (givenT/(len(nC)))/(s.length/2)
 
     # second half sim throughput
     givenT = 0
     for intervalTime in list(dataOut.keys())[int(len(dataOut)/2):]:
-        count = 0 
         for n in dataOut[intervalTime]:
-            count += 1
             givenT += dataOut[intervalTime][n]
-    secondHalfThroughput = (givenT/(count))/(s.length/2)
+    secondHalfThroughput = (givenT/(len(nC)))/(s.length/2)
 
     # get the throughput every 50 seconds
     throughput = {i:0 for i in range(50,int(s.length)+1,50)} 
@@ -85,6 +79,7 @@ def calculateThroughput(path,s):
             
     # add the 1st half and second half data 
     throughput.update({'1stHalf':firstHalfThroughput,'2ndHalf':secondHalfThroughput,'entireSim':entireThroughput})
+
     throughputDF = DataFrame(throughput, index=[0])
     noNodes = str(len(s.network.nodeContainer))
     throughputDF.index = [f'{noNodes}']
@@ -93,7 +88,6 @@ def calculateThroughput(path,s):
     
 def calculatePower(path,s):
     noNodes = str(len(s.network.nodeContainer))
-
     power = {i.uid:{"Constant Role Power Usage":0,
              "Role Change Power Usage": 0,
              "Transmission Power Usage": 0} for i in  s.network.nodeContainer}
@@ -103,10 +97,8 @@ def calculatePower(path,s):
         power[node.uid]["Role Change Power Usage"] = node.stateChangeCost
         power[node.uid]["Transmission Power Usage"] = node.transmissionCost
 
-
     pd = DataFrame.from_dict(power,orient='index')
     pd.to_csv(path+f'/power.csv')
-
 
 
 def calculateFairness(path,s):
@@ -123,7 +115,6 @@ def calculateFairness(path,s):
     nodeThroughput = [0 for i in range(len(nC))]
     for intervalTime in dataOut:
         for n in nC:
-            
             nodeThroughput[n.uid-1] += dataOut[intervalTime][n.uid]
     
     numer = sum(nodeThroughput)**2
@@ -151,11 +142,12 @@ def calculateFairness(path,s):
     secondHalfFairness = numer/denom
 
 
-    # get the fairness every 50 seconds
-    fairness = {i:[0 for i in range(len(nC))] for i in range(50,int(s.length)+1,50)} 
-    for i in range(50,int(s.length)+1,50):
-        for n in nC:
-            fairness[i][n.uid-1] += dataOut[i][n.uid]
+    # get the fairness every 50 seconds of a point, aggregating +- 5 seconds
+    fairness = {i:[0 for i in range(len(nC))] for i in range(45,int(s.length)+1,50)} 
+    for i in range(45,int(s.length)+1,50):
+        for j in range(i-5,i+5+1):
+            for n in nC:
+                fairness[i][n.uid-1] += dataOut[j][n.uid]
 
     print (fairness)
     finalfairness = {}
@@ -173,11 +165,8 @@ def calculateFairness(path,s):
     fairnessDF.to_csv(path+f'/fairness.csv') 
     
 
-
-
 def ccdf(nodes):
     nodes = {key: [x / sum(nodes[1]) for x in value] for key, value in nodes.items()}
-
     state_data = {i: [] for i in range(4)}
     for percentages in nodes.values():
         for idx, p in enumerate(percentages):

@@ -39,17 +39,26 @@ class Simulator:
     def request(self, delay: float, command, *awgs):
         self.requests.append([self.time + delay, command, *awgs])
 
+    
     def manageRequests(self):
-        while float(self.time) in [
-            float(i[0]) for i in self.requests
-        ]:  # to make sure all current requests get processed
+        firstPass = False
+        secondPass = False
+        print (len(self.requests))
+        while not (firstPass and secondPass):  # to make sure all current requests get processed
+            change = False
             for index, request in enumerate(self.requests):
-                if float(request[0]) == float(
-                    self.time
-                ):  # if the current time is equal to the request start time
+                if float(request[0]) == float(self.time):  # if the current time is equal to the request start time
+                    change = True
                     request[1](*request[2:])
                     self.requests.pop(index)
                     self.historicRequests.append(request)
+           
+            if change:
+                firstPass,secondPass = False,False
+            if not change and not firstPass:
+                firstPass = True
+            if not change and firstPass:
+                secondPass = True
 
     def incrementTime(self):
         self.time = round(self.time+ self.interval,2)
@@ -64,8 +73,10 @@ class Simulator:
     def run(self):  # call this to run the sim
         while self.time <= self.length:
             print (self.time)
-            self.manageRequests()  # process requests that are currently scheduled
+            print ("managing requests")
             self.network.updater()
+            self.manageRequests()  # process requests that are currently scheduled
+            
             self.incrementTime()  # increase the time by self.interval
         
 
