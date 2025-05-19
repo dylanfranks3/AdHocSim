@@ -57,7 +57,7 @@ skia-pathops==0.8.0.post1
 srt==3.5.3
 svgelements==1.9.6
 tomlkit==0.12.4
-tqdm==4.66.1
+tqdm==4.66.3
 typing_extensions==4.9.0
 tzdata==2023.4
 urllib3==2.2.0
